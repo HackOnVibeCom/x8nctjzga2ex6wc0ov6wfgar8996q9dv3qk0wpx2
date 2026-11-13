@@ -133,3 +133,4 @@ begin
   alter publication supabase_realtime add table public.transactions;
 exception when others then null;
 end $$;
+

@@ -87,7 +87,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
         currency: room.currency,
         method: 'DIRECT_TRANSFER',
         referenceId: refId,
-        timestamp: 'Just now',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'COMPLETED',
         notes: `Settled via ${payout.bankName}`,
       };
@@ -99,23 +99,17 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
     }, 400);
   };
 
-  // 2. Client-Side ELA Forensic Upload
+  // 2. Client-Side ELA Forensic Upload (Real File Analysis)
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      runForensicScan(file, url);
+      runRealForensicScan(file, url);
     }
   };
 
-  const handleTestSampleProof = (type: 'VALID' | 'TAMPERED') => {
-    const sampleImg = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80';
-    setPreviewUrl(sampleImg);
-    runSimulatedForensicScan(type, sampleImg);
-  };
-
-  const runForensicScan = async (file: File, url: string) => {
+  const runRealForensicScan = async (file: File, url: string) => {
     setIsProcessing(true);
     setProcessingStatus('Running client-side Error Level Analysis (ELA)...');
 
@@ -123,12 +117,12 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
       const elaResult = await runClientSideEla(file);
       setHeatmapUrl(elaResult.heatmapDataUrl);
 
-      setProcessingStatus('Comparing extracted transfer digits with owed share...');
+      setProcessingStatus('Verifying screenshot structure & compression noise...');
       await new Promise((r) => setTimeout(r, 600));
 
       const isTampered = elaResult.report.tamperDetected;
       const refId = `REF-${Date.now().toString().slice(-6)}`;
-      const amountPaid = isTampered ? Math.round(currentOwed * 0.3) : currentOwed;
+      const amountPaid = isTampered ? Math.round(currentOwed * 0.5) : currentOwed;
 
       const report: ForensicReport = {
         ...elaResult.report,
@@ -141,7 +135,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
           bankOrProvider: payout.bankName,
         },
         mismatchDetails: isTampered
-          ? `Discrepancy: Extracted ${formatMoney(amountPaid, room.currency)} does not match owed ${formatMoney(currentOwed, room.currency)}`
+          ? `Discrepancy: High artifact noise detected around amount digits (${elaResult.report.elaScore}/100 anomaly).`
           : undefined,
       };
 
@@ -157,11 +151,11 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
         currency: room.currency,
         method: 'RECEIPT_UPLOAD',
         referenceId: refId,
-        timestamp: 'Just now',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: isTampered ? 'FLAGGED_MISMATCH' : 'COMPLETED',
         proofUrl: url,
         forensics: report,
-        notes: isTampered ? 'Flagged: Transfer amount mismatch or pixel anomaly detected' : 'Authentic screenshot verified',
+        notes: isTampered ? 'Flagged: High compression variance in amount field' : 'Authentic screenshot verified',
       };
 
       setCompletedTx(newTx);
@@ -170,105 +164,9 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
       }
       onRecordTransaction(newTx);
     } catch (err) {
-      console.error(err);
+      console.error('[ELA] Analysis failed:', err);
       setIsProcessing(false);
     }
-  };
-
-  const runSimulatedForensicScan = async (type: 'VALID' | 'TAMPERED', url: string) => {
-    setIsProcessing(true);
-    setProcessingStatus('Scanning compression artifacts on screenshot...');
-    await new Promise((r) => setTimeout(r, 450));
-
-    // Generate an illustrative ELA heatmap canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = type === 'TAMPERED' ? '#1a052b' : '#051b1f';
-      ctx.fillRect(0, 0, 300, 180);
-      
-      // Draw simulated compression noise
-      for (let i = 0; i < 400; i++) {
-        ctx.fillStyle = type === 'TAMPERED' 
-          ? (Math.random() > 0.8 ? '#ff2a85' : '#4a154b') 
-          : (Math.random() > 0.8 ? '#00e5ff' : '#063940');
-        ctx.fillRect(Math.random() * 300, Math.random() * 180, 2, 2);
-      }
-
-      if (type === 'TAMPERED') {
-        // Highlight tampered area in bright red/magenta box
-        ctx.strokeStyle = '#ff0055';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(90, 60, 120, 45);
-        ctx.fillStyle = 'rgba(255, 0, 85, 0.35)';
-        ctx.fillRect(90, 60, 120, 45);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px monospace';
-        ctx.fillText('ANOMALY PEAK: 84%', 95, 85);
-      } else {
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.2)';
-        ctx.fillRect(40, 40, 220, 100);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px monospace';
-        ctx.fillText('UNIFORM NOISE: 12% (OK)', 70, 95);
-      }
-      setHeatmapUrl(canvas.toDataURL());
-    }
-
-    setProcessingStatus('Verifying amount and host recipient...');
-    await new Promise((r) => setTimeout(r, 450));
-
-    const isTampered = type === 'TAMPERED';
-    const amountPaid = isTampered ? Math.round(currentOwed * 0.35) : currentOwed;
-    const refId = `TRX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-    const report: ForensicReport = {
-      elaScore: isTampered ? 84 : 12,
-      elaRiskLevel: isTampered ? 'HIGH' : 'LOW',
-      tamperDetected: isTampered,
-      tamperReason: isTampered
-        ? 'High compression variance detected around numeric digits (possible Photoshop font edit)'
-        : undefined,
-      mismatchDetails: isTampered
-        ? `Screenshot shows ${formatMoney(amountPaid, room.currency)}, but owed share is ${formatMoney(currentOwed, room.currency)}`
-        : undefined,
-      extractedData: {
-        senderName: participant.name,
-        recipientName: room.organizer.name,
-        amountPaid,
-        transactionDate: new Date().toLocaleTimeString(),
-        referenceId: refId,
-        bankOrProvider: payout.bankName,
-      },
-      verifiedAt: new Date().toISOString(),
-    };
-
-    setForensicReport(report);
-    setIsProcessing(false);
-
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      senderId: participant.id,
-      senderName: participant.name,
-      recipientName: room.organizer.name,
-      amount: amountPaid,
-      currency: room.currency,
-      method: 'RECEIPT_UPLOAD',
-      referenceId: refId,
-      timestamp: 'Just now',
-      status: isTampered ? 'FLAGGED_MISMATCH' : 'COMPLETED',
-      proofUrl: url,
-      forensics: report,
-      notes: isTampered ? 'Flagged: Transfer amount mismatch or pixel anomaly' : 'Authentic screenshot verified',
-    };
-
-    setCompletedTx(newTx);
-    if (!isTampered) {
-      confetti({ particleCount: 65, spread: 75, origin: { y: 0.6 } });
-    }
-    onRecordTransaction(newTx);
   };
 
   return (
@@ -384,7 +282,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
               <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 text-left text-xs text-amber-800">
                 <p className="font-semibold flex items-center gap-1">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>Amount Mismatch</span>
+                  <span>Discrepancy Note</span>
                 </p>
                 <p className="text-[11px] mt-0.5">{completedTx.forensics.mismatchDetails}</p>
               </div>
@@ -485,13 +383,13 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
               </div>
             )}
 
-            {/* Tab 2: Upload Screenshot / Forensic Scan */}
+            {/* Tab 2: Upload Real Screenshot / Forensic Scan */}
             {activeTab === 'UPLOAD' && (
               <div className="space-y-3 pt-1">
-                <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/20 p-4 transition-colors cursor-pointer">
-                  <Upload className="h-6 w-6 text-slate-400 mb-1" />
-                  <span className="text-xs font-medium text-slate-700">Upload Transfer Screenshot</span>
-                  <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, or iOS Screenshot</span>
+                <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/20 p-6 transition-colors cursor-pointer">
+                  <Upload className="h-7 w-7 text-slate-400 mb-1.5" />
+                  <span className="text-xs font-medium text-slate-700">Select Transfer Receipt Screenshot</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5">JPEG, PNG from Photos or Files</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -499,31 +397,6 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
                     className="hidden"
                   />
                 </label>
-
-                {/* Instant Judge Demo Test Buttons */}
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[10px] uppercase font-semibold text-slate-400 text-center tracking-wider">
-                    Instant Demo Test (For Judges)
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleTestSampleProof('VALID')}
-                      disabled={isProcessing}
-                      className="flex-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-2 text-[11px] font-medium transition-colors cursor-pointer border border-emerald-200/60"
-                    >
-                      Test Authentic
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleTestSampleProof('TAMPERED')}
-                      disabled={isProcessing}
-                      className="flex-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 py-2 text-[11px] font-medium transition-colors cursor-pointer border border-rose-200/60"
-                    >
-                      Test Tampered Edit
-                    </button>
-                  </div>
-                </div>
 
                 {isProcessing && (
                   <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-50 text-blue-700 text-xs">

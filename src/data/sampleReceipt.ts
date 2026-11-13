@@ -9,8 +9,8 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
     id: 'p-alex',
     name: 'Alex (Host)',
     payout: {
-      bankName: 'Chase QuickPay / Zelle',
-      accountNumber: 'alex.miller@chase.me',
+      bankName: 'PayPal / Zelle',
+      accountNumber: 'paypal.me/alexmiller',
       accountName: 'Alex Miller',
       note: 'Please add "Dinner" in payment memo!',
     },
@@ -23,7 +23,7 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       quantity: 1,
       unitPrice: 84.0,
       totalPrice: 84.0,
-      claimedBy: ['p-alex', 'p-elena'], // Shared between Alex and Elena
+      claimedBy: ['p-alex', 'p-elena'],
     },
     {
       id: 'item-2',
@@ -32,7 +32,7 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       quantity: 1,
       unitPrice: 46.0,
       totalPrice: 46.0,
-      claimedBy: ['p-marcus'], // Claimed by Marcus
+      claimedBy: ['p-marcus'],
     },
     {
       id: 'item-3',
@@ -41,7 +41,7 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       quantity: 1,
       unitPrice: 38.0,
       totalPrice: 38.0,
-      claimedBy: ['p-jordan'], // Claimed by Jordan
+      claimedBy: ['p-jordan'],
     },
     {
       id: 'item-4',
@@ -50,7 +50,7 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       quantity: 1,
       unitPrice: 95.0,
       totalPrice: 95.0,
-      claimedBy: ['p-alex', 'p-elena', 'p-marcus'], // 3-way split
+      claimedBy: ['p-alex', 'p-elena', 'p-marcus'],
     },
     {
       id: 'item-5',
@@ -59,12 +59,12 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       quantity: 2,
       unitPrice: 9.0,
       totalPrice: 18.0,
-      claimedBy: [], // Unclaimed item demo!
+      claimedBy: [],
     },
   ],
   subtotal: 281.0,
-  tax: 24.94, // 8.875% NYC Sales Tax
-  serviceFee: 50.58, // 18% Gratuity
+  tax: 24.94,
+  serviceFee: 50.58,
   deliveryFee: 0,
   discount: 0,
   grandTotal: 356.52,
@@ -74,75 +74,19 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       name: 'Alex',
       avatarColor: 'from-violet-500 to-indigo-600',
       isOrganizer: true,
-      paymentStatus: 'VERIFIED',
-      paymentProof: {
-        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-        uploadedAt: '2026-11-13T07:15:00Z',
-        forensics: {
-          elaScore: 12,
-          elaRiskLevel: 'LOW',
-          tamperDetected: false,
-          extractedData: {
-            senderName: 'Alex Miller',
-            recipientName: 'SoHo Bistro LLC',
-            amountPaid: 356.52,
-            transactionDate: '13 Nov 2026, 09:14 PM',
-            referenceId: 'CHASE-TRX-948102934',
-            bankOrProvider: 'Chase Bank',
-          },
-          verifiedAt: '2026-11-13T07:15:30Z',
-        },
-      },
+      paymentStatus: 'UNPAID',
     },
     {
       id: 'p-elena',
       name: 'Elena',
       avatarColor: 'from-emerald-500 to-teal-600',
-      paymentStatus: 'VERIFIED',
-      paymentProof: {
-        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-        uploadedAt: '2026-11-13T07:42:00Z',
-        forensics: {
-          elaScore: 16,
-          elaRiskLevel: 'LOW',
-          tamperDetected: false,
-          extractedData: {
-            senderName: 'Elena Rostova',
-            recipientName: 'Alex Miller',
-            amountPaid: 93.52,
-            transactionDate: '13 Nov 2026, 09:40 PM',
-            referenceId: 'APPL-CASH-44910283',
-            bankOrProvider: 'Apple Cash / Zelle',
-          },
-          verifiedAt: '2026-11-13T07:42:15Z',
-        },
-      },
+      paymentStatus: 'UNPAID',
     },
     {
       id: 'p-marcus',
       name: 'Marcus',
       avatarColor: 'from-amber-500 to-orange-600',
-      paymentStatus: 'PARTIAL_OR_MISMATCH',
-      paymentProof: {
-        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-        uploadedAt: '2026-11-13T07:55:00Z',
-        forensics: {
-          elaScore: 82,
-          elaRiskLevel: 'HIGH',
-          tamperDetected: true,
-          tamperReason: 'Detected inconsistent compression artifacts around amount digits "$30.00"',
-          mismatchDetails: 'Receipt screenshot shows $30.00, but owed portion is $98.62',
-          extractedData: {
-            senderName: 'Marcus Vance',
-            recipientName: 'Alex Miller',
-            amountPaid: 30.0,
-            transactionDate: '13 Nov 2026, 09:50 PM',
-            referenceId: 'VNM-TRX-1930291',
-            bankOrProvider: 'Venmo',
-          },
-          verifiedAt: '2026-11-13T07:55:20Z',
-        },
-      },
+      paymentStatus: 'UNPAID',
     },
     {
       id: 'p-jordan',
@@ -151,35 +95,7 @@ export const SAMPLE_ROOM_GLOBAL_USD: Room = {
       paymentStatus: 'UNPAID',
     },
   ],
-  transactions: [
-    {
-      id: 'tx-101',
-      senderId: 'p-elena',
-      senderName: 'Elena',
-      recipientName: 'Alex Miller',
-      amount: 93.52,
-      currency: 'USD',
-      method: 'RECEIPT_UPLOAD',
-      referenceId: 'APPL-CASH-44910283',
-      timestamp: 'Today, 09:40 PM',
-      status: 'COMPLETED',
-      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-    },
-    {
-      id: 'tx-102',
-      senderId: 'p-marcus',
-      senderName: 'Marcus',
-      recipientName: 'Alex Miller',
-      amount: 30.0,
-      currency: 'USD',
-      method: 'RECEIPT_UPLOAD',
-      referenceId: 'VNM-TRX-1930291',
-      timestamp: 'Today, 09:50 PM',
-      status: 'FLAGGED_MISMATCH',
-      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-      notes: 'Screenshot shows $30.00, but owed share is $98.62 (Underpaid by $68.62).',
-    },
-  ],
+  transactions: [],
   createdAt: new Date().toISOString(),
 };
 
@@ -237,8 +153,8 @@ export const SAMPLE_ROOM_GLOBAL_EUR: Room = {
     },
   ],
   subtotal: 104.0,
-  tax: 19.76, // 19% MwSt
-  serviceFee: 10.4, // 10% Service
+  tax: 19.76,
+  serviceFee: 10.4,
   deliveryFee: 0,
   discount: 0,
   grandTotal: 134.16,
@@ -248,7 +164,7 @@ export const SAMPLE_ROOM_GLOBAL_EUR: Room = {
       name: 'Lukas',
       avatarColor: 'from-purple-500 to-indigo-600',
       isOrganizer: true,
-      paymentStatus: 'VERIFIED',
+      paymentStatus: 'UNPAID',
     },
     {
       id: 'p-sophie',
@@ -321,8 +237,8 @@ export const SAMPLE_ROOM_GLOBAL_JPY: Room = {
     },
   ],
   subtotal: 9900,
-  tax: 990, // 10% Japanese Consumption Tax
-  serviceFee: 500, // Otoshi table charge
+  tax: 990,
+  serviceFee: 500,
   deliveryFee: 0,
   discount: 0,
   grandTotal: 11390,
@@ -332,7 +248,7 @@ export const SAMPLE_ROOM_GLOBAL_JPY: Room = {
       name: 'Kenji',
       avatarColor: 'from-blue-500 to-indigo-600',
       isOrganizer: true,
-      paymentStatus: 'VERIFIED',
+      paymentStatus: 'UNPAID',
     },
     {
       id: 'p-aoi',
@@ -350,4 +266,3 @@ export const SAMPLE_ROOM_GLOBAL_JPY: Room = {
   transactions: [],
   createdAt: new Date().toISOString(),
 };
-

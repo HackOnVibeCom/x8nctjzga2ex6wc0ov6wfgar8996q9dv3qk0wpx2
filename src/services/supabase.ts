@@ -355,3 +355,4 @@ export function subscribeToRoom(roomId: string, onUpdate: () => void) {
     supabase.removeChannel(channel);
   };
 }
+

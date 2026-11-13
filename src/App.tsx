@@ -25,7 +25,17 @@ export function App() {
   const [room, setRoom] = useState<Room | null>(() => {
     try {
       const saved = localStorage.getItem('ipin_saved_room');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Clean out legacy mock transactions if present
+        if (parsed.transactions && parsed.transactions.some((t: any) => t.id === 'tx-101' || t.id === 'tx-102')) {
+          parsed.transactions = [];
+          if (parsed.participants) {
+            parsed.participants.forEach((p: any) => { p.paymentStatus = 'UNPAID'; p.paymentProof = undefined; });
+          }
+        }
+        return parsed;
+      }
     } catch {}
     return null;
   });
@@ -90,21 +100,36 @@ export function App() {
   }, [room?.id, refreshRoom]);
 
   const loadSampleRoom = async (type: 'USD' | 'EUR' | 'JPY') => {
-    const sample = type === 'EUR' 
+    const baseSample = type === 'EUR' 
       ? SAMPLE_ROOM_GLOBAL_EUR 
       : type === 'JPY' 
       ? SAMPLE_ROOM_GLOBAL_JPY 
       : SAMPLE_ROOM_GLOBAL_USD;
 
-    setRoom(sample);
-    if (sample.participants.length > 0) {
-      const unpaid = sample.participants.find(p => p.paymentStatus === 'UNPAID');
-      setCurrentUserId(unpaid ? unpaid.id : sample.participants[0].id);
+    const uniqueRoom: Room = {
+      ...baseSample,
+      id: `room-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+      participants: baseSample.participants.map(p => ({
+        ...p,
+        paymentStatus: 'UNPAID' as const,
+        paymentProof: undefined,
+      })),
+      transactions: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    setRoom(uniqueRoom);
+    if (uniqueRoom.participants.length > 0) {
+      setCurrentUserId(uniqueRoom.participants[0].id);
     }
     setActiveTab('CLAIM');
 
-    // Sync to Supabase so it's live on PostgreSQL immediately
-    saveNewRoomToDb(sample).catch(() => {});
+    // Update URL to ?r=<uniqueRoom.id>
+    const newUrl = `${window.location.pathname}?r=${uniqueRoom.id}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    // Sync clean room to Supabase PostgreSQL
+    saveNewRoomToDb(uniqueRoom).catch(() => {});
   };
 
   const handleCreateRoom = async (roomData: Partial<Room>) => {
