@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Room, Participant, LineItem, Transaction } from './types';
-import { SAMPLE_ROOM_GLOBAL_USD, SAMPLE_ROOM_GLOBAL_EUR } from './data/sampleReceipt';
+import { SAMPLE_ROOM_GLOBAL_USD, SAMPLE_ROOM_GLOBAL_EUR, SAMPLE_ROOM_GLOBAL_JPY } from './data/sampleReceipt';
 import { calculateProportionalSplit } from './utils/splitMath';
 import { Navbar } from './components/Navbar';
 import { LandingHero } from './components/LandingHero';
@@ -13,7 +13,13 @@ import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav } from './components/BottomNav';
 
 export function App() {
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<Room | null>(() => {
+    try {
+      const saved = localStorage.getItem('ipin_saved_room');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'CLAIM' | 'LEDGER' | 'SUMMARY'>('CLAIM');
   const [hasShareCopied, setHasShareCopied] = useState(false);
@@ -23,23 +29,41 @@ export function App() {
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
 
-  // Check URL query on mount (e.g. ?demo=usd or ?demo=eur)
+  // Sync state to localStorage on changes
+  useEffect(() => {
+    if (room) {
+      try {
+        localStorage.setItem('ipin_saved_room', JSON.stringify(room));
+      } catch {}
+    }
+  }, [room]);
+
+  // Check URL query on mount (e.g. ?demo=usd, ?demo=eur, ?demo=jpy)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const demo = params.get('demo');
 
     if (demo === 'eur') {
       loadSampleRoom('EUR');
-    } else {
+    } else if (demo === 'jpy') {
+      loadSampleRoom('JPY');
+    } else if (demo === 'usd') {
+      loadSampleRoom('USD');
+    } else if (!room) {
+      // Default to global USD sample if no saved room exists
       loadSampleRoom('USD');
     }
   }, []);
 
-  const loadSampleRoom = (type: 'USD' | 'EUR') => {
-    const sample = type === 'EUR' ? SAMPLE_ROOM_GLOBAL_EUR : SAMPLE_ROOM_GLOBAL_USD;
+  const loadSampleRoom = (type: 'USD' | 'EUR' | 'JPY') => {
+    const sample = type === 'EUR' 
+      ? SAMPLE_ROOM_GLOBAL_EUR 
+      : type === 'JPY' 
+      ? SAMPLE_ROOM_GLOBAL_JPY 
+      : SAMPLE_ROOM_GLOBAL_USD;
     setRoom(sample);
     if (sample.participants.length > 0) {
-      // Default to Jordan (unpaid user) to let judges test claiming and paying right away
+      // Default to unpaid user to let judges test claiming and paying right away
       const unpaid = sample.participants.find(p => p.paymentStatus === 'UNPAID');
       setCurrentUserId(unpaid ? unpaid.id : sample.participants[0].id);
     }
@@ -200,10 +224,14 @@ export function App() {
     <div className="min-h-screen bg-slate-900 sm:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* Global Navigation Bar */}
       <Navbar
-        onNewBill={() => setRoom(null)}
-        onTryDemo={() => loadSampleRoom('USD')}
+        onNewBill={() => {
+          try { localStorage.removeItem('ipin_saved_room'); } catch {}
+          setRoom(null);
+        }}
+        onTryDemo={(currency) => loadSampleRoom(currency || 'USD')}
         isInRoom={!!room}
         roomTitle={room?.title}
+        currentCurrency={room?.currency}
       />
 
       {/* Main Responsive Body Container */}

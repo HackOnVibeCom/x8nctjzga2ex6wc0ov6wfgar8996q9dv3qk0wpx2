@@ -10,7 +10,8 @@ import {
   Scan, 
   ShieldCheck, 
   Sparkles,
-  ArrowRight
+  Eye,
+  Layers
 } from 'lucide-react';
 import { Participant, Room, Transaction, ForensicReport } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -44,6 +45,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
 
   // ELA Forensics state
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
+  const [activeImgView, setActiveImgView] = useState<'PHOTO' | 'HEATMAP'>('HEATMAP');
   const [forensicReport, setForensicReport] = useState<ForensicReport | null>(null);
 
   if (!isOpen) return null;
@@ -118,6 +121,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
 
     try {
       const elaResult = await runClientSideEla(file);
+      setHeatmapUrl(elaResult.heatmapDataUrl);
+
       setProcessingStatus('Comparing extracted transfer digits with owed share...');
       await new Promise((r) => setTimeout(r, 600));
 
@@ -173,10 +178,47 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   const runSimulatedForensicScan = async (type: 'VALID' | 'TAMPERED', url: string) => {
     setIsProcessing(true);
     setProcessingStatus('Scanning compression artifacts on screenshot...');
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 450));
+
+    // Generate an illustrative ELA heatmap canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = type === 'TAMPERED' ? '#1a052b' : '#051b1f';
+      ctx.fillRect(0, 0, 300, 180);
+      
+      // Draw simulated compression noise
+      for (let i = 0; i < 400; i++) {
+        ctx.fillStyle = type === 'TAMPERED' 
+          ? (Math.random() > 0.8 ? '#ff2a85' : '#4a154b') 
+          : (Math.random() > 0.8 ? '#00e5ff' : '#063940');
+        ctx.fillRect(Math.random() * 300, Math.random() * 180, 2, 2);
+      }
+
+      if (type === 'TAMPERED') {
+        // Highlight tampered area in bright red/magenta box
+        ctx.strokeStyle = '#ff0055';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(90, 60, 120, 45);
+        ctx.fillStyle = 'rgba(255, 0, 85, 0.35)';
+        ctx.fillRect(90, 60, 120, 45);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.fillText('ANOMALY PEAK: 84%', 95, 85);
+      } else {
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.2)';
+        ctx.fillRect(40, 40, 220, 100);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.fillText('UNIFORM NOISE: 12% (OK)', 70, 95);
+      }
+      setHeatmapUrl(canvas.toDataURL());
+    }
 
     setProcessingStatus('Verifying amount and host recipient...');
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 450));
 
     const isTampered = type === 'TAMPERED';
     const amountPaid = isTampered ? Math.round(currentOwed * 0.35) : currentOwed;
@@ -254,7 +296,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
           </p>
         </div>
 
-        {/* Success State View */}
+        {/* Success / Inspected State View */}
         {completedTx ? (
           <div className="space-y-4 py-2 text-center">
             <div className={`flex h-14 w-14 mx-auto items-center justify-center rounded-full ${
@@ -278,6 +320,65 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
                 Ref: <span className="font-mono">{completedTx.referenceId}</span>
               </p>
             </div>
+
+            {/* Visual ELA Heatmap Display if available */}
+            {heatmapUrl && (
+              <div className="space-y-2 rounded-2xl bg-slate-900 p-3 text-left">
+                <div className="flex items-center justify-between text-xs text-white">
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-blue-400" />
+                    <span>Client ELA Visualizer</span>
+                  </span>
+                  <div className="flex rounded-lg bg-white/10 p-0.5 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setActiveImgView('HEATMAP')}
+                      className={`px-2 py-0.5 rounded cursor-pointer ${
+                        activeImgView === 'HEATMAP' ? 'bg-blue-600 text-white' : 'text-slate-300'
+                      }`}
+                    >
+                      Heatmap
+                    </button>
+                    {previewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveImgView('PHOTO')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${
+                          activeImgView === 'PHOTO' ? 'bg-blue-600 text-white' : 'text-slate-300'
+                        }`}
+                      >
+                        Original
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center min-h-[140px]">
+                  {activeImgView === 'HEATMAP' ? (
+                    <img 
+                      src={heatmapUrl} 
+                      alt="ELA Heatmap" 
+                      className="w-full h-36 object-contain"
+                    />
+                  ) : (
+                    <img 
+                      src={previewUrl!} 
+                      alt="Original Proof" 
+                      className="w-full h-36 object-cover"
+                    />
+                  )}
+                </div>
+
+                <div className="text-[10px] text-slate-300 flex justify-between items-center pt-0.5">
+                  <span>Compression variance:</span>
+                  <span className={`font-mono font-bold ${
+                    completedTx.forensics?.tamperDetected ? 'text-rose-400' : 'text-emerald-400'
+                  }`}>
+                    Score: {completedTx.forensics?.elaScore || 12}/100 ({completedTx.forensics?.elaRiskLevel || 'LOW'})
+                  </span>
+                </div>
+              </div>
+            )}
 
             {completedTx.forensics?.mismatchDetails && (
               <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 text-left text-xs text-amber-800">

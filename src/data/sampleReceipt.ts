@@ -266,3 +266,88 @@ export const SAMPLE_ROOM_GLOBAL_EUR: Room = {
   transactions: [],
   createdAt: new Date().toISOString(),
 };
+
+export const SAMPLE_ROOM_GLOBAL_JPY: Room = {
+  id: 'shinjuku-izakaya-305',
+  title: 'Shinjuku Yakitori & Sake Tasting (Tokyo)',
+  currency: 'JPY',
+  currencySymbol: '¥',
+  organizer: {
+    id: 'p-kenji',
+    name: 'Kenji (Host)',
+    payout: {
+      bankName: 'PayPay / Wise',
+      accountNumber: 'paypay.ne.jp/kenjisplits',
+      accountName: 'Kenji Sato',
+      note: 'PayPay or Wise instant transfer',
+    },
+  },
+  items: [
+    {
+      id: 'j-1',
+      rawName: 'YAKITORI PLATTER 10PC',
+      cleanName: 'Charcoal Yakitori Skewer Platter (10pc)',
+      quantity: 1,
+      unitPrice: 2400,
+      totalPrice: 2400,
+      claimedBy: ['p-kenji', 'p-aoi', 'p-hiro'],
+    },
+    {
+      id: 'j-2',
+      rawName: 'SASHIMI MORIAWASE',
+      cleanName: 'Fresh Tuna & Salmon Sashimi Set',
+      quantity: 1,
+      unitPrice: 2800,
+      totalPrice: 2800,
+      claimedBy: ['p-aoi', 'p-hiro'],
+    },
+    {
+      id: 'j-3',
+      rawName: 'JUNMAI DAIGINJO CARAFE',
+      cleanName: 'Dassai 23 Junmai Daiginjo Sake',
+      quantity: 1,
+      unitPrice: 3500,
+      totalPrice: 3500,
+      claimedBy: ['p-kenji', 'p-hiro'],
+    },
+    {
+      id: 'j-4',
+      rawName: 'MATCHA ICE CREAM X3',
+      cleanName: 'Kyoto Uji Matcha Gelato (x3)',
+      quantity: 3,
+      unitPrice: 400,
+      totalPrice: 1200,
+      claimedBy: [],
+    },
+  ],
+  subtotal: 9900,
+  tax: 990, // 10% Japanese Consumption Tax
+  serviceFee: 500, // Otoshi table charge
+  deliveryFee: 0,
+  discount: 0,
+  grandTotal: 11390,
+  participants: [
+    {
+      id: 'p-kenji',
+      name: 'Kenji',
+      avatarColor: 'from-blue-500 to-indigo-600',
+      isOrganizer: true,
+      paymentStatus: 'VERIFIED',
+    },
+    {
+      id: 'p-aoi',
+      name: 'Aoi',
+      avatarColor: 'from-pink-500 to-rose-600',
+      paymentStatus: 'UNPAID',
+    },
+    {
+      id: 'p-hiro',
+      name: 'Hiro',
+      avatarColor: 'from-teal-500 to-emerald-600',
+      paymentStatus: 'UNPAID',
+    },
+  ],
+  transactions: [],
+  createdAt: new Date().toISOString(),
+};
+

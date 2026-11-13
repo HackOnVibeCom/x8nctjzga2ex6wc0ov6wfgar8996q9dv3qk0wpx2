@@ -52,13 +52,44 @@ export function formatMoney(amount: number, currency: Currency = 'USD'): string 
 }
 
 /**
+ * Distributes an item cost evenly among N claimers with exact penny balancing
+ * e.g., $10 / 3 => [$3.33, $3.33, $3.34]
+ */
+export function splitAmountEqually(total: number, count: number, isZeroDecimal = false): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [isZeroDecimal ? Math.round(total) : roundToTwo(total)];
+
+  if (isZeroDecimal) {
+    const base = Math.floor(total / count);
+    const remainder = total - (base * count);
+    const result: number[] = [];
+    for (let i = 0; i < count; i++) {
+      result.push(base + (i < remainder ? 1 : 0));
+    }
+    return result;
+  }
+
+  const totalCents = Math.round(total * 100);
+  const baseCents = Math.floor(totalCents / count);
+  const remainderCents = totalCents - (baseCents * count);
+
+  const result: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const shareCents = baseCents + (i >= count - remainderCents ? 1 : 0);
+    result.push(roundToTwo(shareCents / 100));
+  }
+  return result;
+}
+
+/**
  * Core Proportional Split Math Engine
  *
- * Distributes item costs among multiple co-claimers,
+ * Distributes item costs among multiple co-claimers with zero penny loss,
  * and distributes tax + service fee + delivery fee - discounts
  * proportionally based on each participant's item subtotal share.
  */
 export function calculateProportionalSplit(room: Room): SplitCalculationResult {
+  const isZeroDecimal = room.currency === 'JPY';
   const participantBreakdowns: Record<string, ParticipantShareBreakdown> = {};
 
   // 1. Initialize participant breakdowns
@@ -82,7 +113,7 @@ export function calculateProportionalSplit(room: Room): SplitCalculationResult {
   let unclaimedSubtotal = 0;
   let unclaimedItemsCount = 0;
 
-  // 2. Iterate through line items and divide among co-claimers
+  // 2. Iterate through line items and divide among co-claimers with penny balancing
   for (const item of room.items) {
     const claimers = item.claimedBy || [];
     if (claimers.length === 0) {
@@ -92,11 +123,12 @@ export function calculateProportionalSplit(room: Room): SplitCalculationResult {
     }
 
     const shareCount = claimers.length;
-    const pricePerClaimer = item.totalPrice / shareCount;
+    const splitShares = splitAmountEqually(item.totalPrice, shareCount, isZeroDecimal);
 
-    for (const claimerId of claimers) {
+    claimers.forEach((claimerId, index) => {
+      const pricePerClaimer = splitShares[index];
+
       if (!participantBreakdowns[claimerId]) {
-        // Fallback for an unknown participant ID
         participantBreakdowns[claimerId] = {
           participantId: claimerId,
           participantName: `User ${claimerId.slice(0, 4)}`,
@@ -119,7 +151,7 @@ export function calculateProportionalSplit(room: Room): SplitCalculationResult {
 
       participantBreakdowns[claimerId].itemSubtotal += pricePerClaimer;
       totalClaimedSubtotal += pricePerClaimer;
-    }
+    });
   }
 
   // 3. Calculate extra charges (tax + serviceFee + deliveryFee - discount)
@@ -133,55 +165,97 @@ export function calculateProportionalSplit(room: Room): SplitCalculationResult {
   const billSubtotal = room.items.reduce((acc, it) => acc + it.totalPrice, 0);
 
   // 4. Distribute extra charges proportionally to each participant
-  for (const pId of Object.keys(participantBreakdowns)) {
+  const participantIds = Object.keys(participantBreakdowns);
+  let totalDistributedExtraCharges = 0;
+
+  for (const pId of participantIds) {
     const p = participantBreakdowns[pId];
-    p.itemSubtotal = roundToTwo(p.itemSubtotal);
+    p.itemSubtotal = isZeroDecimal ? Math.round(p.itemSubtotal) : roundToTwo(p.itemSubtotal);
 
     if (billSubtotal > 0 && p.itemSubtotal > 0) {
-      // Proportion of their claimed items relative to total bill subtotal
       const ratio = p.itemSubtotal / billSubtotal;
       p.percentageOfSubtotal = roundToTwo(ratio * 100);
-      p.proportionalExtraCharges = roundToTwo(extraChargesTotal * ratio);
+      const share = extraChargesTotal * ratio;
+      p.proportionalExtraCharges = isZeroDecimal ? Math.round(share) : roundToTwo(share);
+      totalDistributedExtraCharges += p.proportionalExtraCharges;
     } else {
       p.percentageOfSubtotal = 0;
       p.proportionalExtraCharges = 0;
     }
 
-    p.totalOwed = roundToTwo(Math.max(0, p.itemSubtotal + p.proportionalExtraCharges));
+    p.totalOwed = isZeroDecimal
+      ? Math.max(0, Math.round(p.itemSubtotal + p.proportionalExtraCharges))
+      : roundToTwo(Math.max(0, p.itemSubtotal + p.proportionalExtraCharges));
+  }
 
-    // Calculate actual payments from transactions
+  // 5. Penny balancing on extra charges if ALL items are claimed
+  const isFullyClaimed = unclaimedItemsCount === 0 && roundToTwo(unclaimedSubtotal) === 0;
+  const grandTotal = isZeroDecimal
+    ? Math.max(0, Math.round(room.grandTotal || (billSubtotal + extraChargesTotal)))
+    : roundToTwo(Math.max(0, room.grandTotal || (billSubtotal + extraChargesTotal)));
+
+  if (isFullyClaimed && participantIds.length > 0) {
+    const currentTotalOwed = participantIds.reduce((sum, id) => sum + participantBreakdowns[id].totalOwed, 0);
+    const roundingDiff = isZeroDecimal
+      ? grandTotal - currentTotalOwed
+      : roundToTwo(grandTotal - currentTotalOwed);
+
+    // If there is a small rounding drift (e.g. ±$0.01 or ±$0.02) from independent roundings, absorb into the largest consumer
+    if (roundingDiff !== 0 && Math.abs(roundingDiff) <= 0.05) {
+      // Find participant with highest owed amount
+      const highestP = participantIds.reduce((maxId, currId) =>
+        participantBreakdowns[currId].totalOwed > participantBreakdowns[maxId].totalOwed ? currId : maxId,
+        participantIds[0]
+      );
+      if (highestP) {
+        participantBreakdowns[highestP].totalOwed = isZeroDecimal
+          ? Math.round(participantBreakdowns[highestP].totalOwed + roundingDiff)
+          : roundToTwo(participantBreakdowns[highestP].totalOwed + roundingDiff);
+        participantBreakdowns[highestP].proportionalExtraCharges = isZeroDecimal
+          ? Math.round(participantBreakdowns[highestP].proportionalExtraCharges + roundingDiff)
+          : roundToTwo(participantBreakdowns[highestP].proportionalExtraCharges + roundingDiff);
+      }
+    }
+  }
+
+  // 6. Calculate settlement status for each participant
+  for (const pId of participantIds) {
+    const p = participantBreakdowns[pId];
     const successfulTx = (room.transactions || []).filter(
       (tx) => tx.senderId === p.participantId && tx.status === 'COMPLETED'
     );
     const paidSum = successfulTx.reduce((acc, tx) => acc + tx.amount, 0);
-    p.amountPaid = roundToTwo(paidSum);
-    p.amountRemaining = roundToTwo(Math.max(0, p.totalOwed - p.amountPaid));
+    p.amountPaid = isZeroDecimal ? Math.round(paidSum) : roundToTwo(paidSum);
+    p.amountRemaining = isZeroDecimal
+      ? Math.max(0, Math.round(p.totalOwed - p.amountPaid))
+      : roundToTwo(Math.max(0, p.totalOwed - p.amountPaid));
 
     if (p.amountRemaining === 0 && p.totalOwed > 0) {
       p.paymentStatus = 'VERIFIED';
     }
   }
 
-  const isFullyClaimed = unclaimedItemsCount === 0 && roundToTwo(unclaimedSubtotal) === 0;
+  const totalCollected = isZeroDecimal
+    ? Math.round((room.transactions || []).filter((tx) => tx.status === 'COMPLETED').reduce((acc, tx) => acc + tx.amount, 0))
+    : roundToTwo((room.transactions || []).filter((tx) => tx.status === 'COMPLETED').reduce((acc, tx) => acc + tx.amount, 0));
 
-  const totalCollected = roundToTwo(
-    (room.transactions || [])
-      .filter((tx) => tx.status === 'COMPLETED')
-      .reduce((acc, tx) => acc + tx.amount, 0)
-  );
+  const remainingToCollect = isZeroDecimal
+    ? Math.max(0, Math.round(grandTotal - totalCollected))
+    : roundToTwo(Math.max(0, grandTotal - totalCollected));
 
-  const grandTotal = roundToTwo(room.grandTotal || (billSubtotal + extraChargesTotal));
-  const remainingToCollect = roundToTwo(Math.max(0, grandTotal - totalCollected));
-  const collectionProgressPercent = grandTotal > 0 ? Math.min(100, Math.round((totalCollected / grandTotal) * 100)) : 0;
+  const collectionProgressPercent = grandTotal > 0
+    ? Math.min(100, Math.round((totalCollected / grandTotal) * 100))
+    : 0;
+
   const isFullySettled = remainingToCollect === 0 && isFullyClaimed;
 
   return {
     participantBreakdowns,
-    totalClaimedSubtotal: roundToTwo(totalClaimedSubtotal),
-    unclaimedSubtotal: roundToTwo(unclaimedSubtotal),
+    totalClaimedSubtotal: isZeroDecimal ? Math.round(totalClaimedSubtotal) : roundToTwo(totalClaimedSubtotal),
+    unclaimedSubtotal: isZeroDecimal ? Math.round(unclaimedSubtotal) : roundToTwo(unclaimedSubtotal),
     unclaimedItemsCount,
     grandTotal,
-    extraChargesTotal: roundToTwo(extraChargesTotal),
+    extraChargesTotal: isZeroDecimal ? Math.round(extraChargesTotal) : roundToTwo(extraChargesTotal),
     totalCollected,
     remainingToCollect,
     collectionProgressPercent,
@@ -189,4 +263,3 @@ export function calculateProportionalSplit(room: Room): SplitCalculationResult {
     isFullySettled,
   };
 }
-
