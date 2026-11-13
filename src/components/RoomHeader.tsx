@@ -4,13 +4,11 @@ import {
   Check, 
   Share2, 
   UserPlus, 
-  Building2,
-  ArrowUpRight,
-  Plus,
-  QrCode,
-  Eye,
-  EyeOff,
-  Sparkles
+  Plus, 
+  ExternalLink,
+  Sparkles,
+  Zap,
+  Info
 } from 'lucide-react';
 import { Room, SplitCalculationResult, Participant } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -22,7 +20,7 @@ interface RoomHeaderProps {
   onAddParticipant: (name: string) => void;
   onSwitchUser: (participantId: string) => void;
   onShare: () => void;
-  onOpenTransferKeypad: () => void;
+  onOpenSettleUp: () => void;
   onOpenAddItem: () => void;
 }
 
@@ -33,14 +31,13 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   onAddParticipant,
   onSwitchUser,
   onShare,
-  onOpenTransferKeypad,
+  onOpenSettleUp,
   onOpenAddItem,
 }) => {
   const [copiedBank, setCopiedBank] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [showBankModal, setShowBankModal] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [newUserName, setNewUserName] = useState('');
-  const [showBalance, setShowBalance] = useState(true);
 
   const copyBankDetails = () => {
     const text = `${room.organizer.payout.bankName} - ${room.organizer.payout.accountNumber} (${room.organizer.payout.accountName})`;
@@ -58,12 +55,13 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   };
 
   const myBreakdown = splitResult.participantBreakdowns[currentUser.id];
+  const myRemaining = myBreakdown?.amountRemaining || 0;
 
   return (
     <div className="w-full bg-[#050819] text-white">
-      <div className="px-4 sm:px-6 pt-4 pb-6 space-y-4">
+      <div className="px-4 sm:px-6 pt-4 pb-5 space-y-4">
         
-        {/* Top Info Bar (Payvia Style: Greeting + User profile + Bell) */}
+        {/* Top Info Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-semibold ring-2 ring-white/10">
@@ -82,33 +80,23 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onShare}
-              className="flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-normal text-slate-200 transition-colors cursor-pointer"
-            >
-              <Share2 className="h-3.5 w-3.5 text-blue-400" />
-              <span>Share</span>
-            </button>
-          </div>
+          <button
+            onClick={onShare}
+            className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+          >
+            <Share2 className="h-3.5 w-3.5 text-blue-400" />
+            <span>Share Room</span>
+          </button>
         </div>
 
-        {/* Big Balance Card (Template 3 Screen 2 Style: Total Balance + Eyeball + Actions) */}
-        <div className="text-center py-2 space-y-1">
-          <div className="flex items-center justify-center gap-1.5 text-slate-400 text-xs">
-            <span className="text-[11px] uppercase tracking-wider font-medium">Total Bill Balance</span>
-            <button 
-              onClick={() => setShowBalance(!showBalance)}
-              className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-            >
-              {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-
+        {/* Total Bill Balance Display */}
+        <div className="text-center py-1.5 space-y-1">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-slate-400">
+            Total Bill
+          </p>
           <div className="text-3xl sm:text-4xl font-bold tracking-tight text-white font-sans">
-            {showBalance ? formatMoney(room.grandTotal, room.currency) : '••••••••'}
+            {formatMoney(room.grandTotal, room.currency)}
           </div>
-
           <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-0.5">
             <span className="text-emerald-400 font-medium">
               Collected: {formatMoney(splitResult.totalCollected, room.currency)}
@@ -121,37 +109,38 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             </span>
           </div>
 
-          {/* Action Pills Row (Template 3 Signature: + Deposit, Transfer, More) */}
-          <div className="flex items-center justify-center gap-2.5 pt-3">
+          {/* Quick Action Pills */}
+          <div className="flex items-center justify-center gap-2 pt-2.5">
             <button
               onClick={onOpenAddItem}
-              className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/15 px-4 py-2 text-xs font-medium text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/15 px-3.5 py-1.5 text-xs font-medium text-white transition-colors cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 text-blue-400" />
-              <span>+ Add Item</span>
+              <span>Add Item</span>
             </button>
 
-            <button
-              onClick={onOpenTransferKeypad}
-              className="flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-semibold text-white shadow-blue-btn hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              <span>Transfer</span>
-            </button>
+            {myRemaining > 0 && (
+              <button
+                onClick={onOpenSettleUp}
+                className="flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white shadow-blue-btn hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span>Settle My Share ({formatMoney(myRemaining, room.currency)})</span>
+              </button>
+            )}
 
             <button
-              onClick={() => setShowBankModal(true)}
-              className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/15 px-3 py-2 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-              title="Host Payout Details / QR"
+              onClick={() => setShowPayoutModal(true)}
+              className="flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/15 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
             >
-              <QrCode className="h-3.5 w-3.5 text-slate-300" />
-              <span>Payout Info</span>
+              <Info className="h-3.5 w-3.5 text-slate-300" />
+              <span>Host Info</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Participants Avatar Row (Template 3 "Recent Contacts" Style) */}
+      {/* Participants Avatar Row */}
       <div className="rounded-t-[28px] bg-white pt-4 pb-3 px-4 sm:px-6 text-slate-900 border-b border-slate-100 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -203,19 +192,19 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
         </div>
       </div>
 
-      {/* Add User Modal */}
+      {/* Add Friend Modal */}
       {showAddUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl text-slate-900">
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">Add Participant</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Add Friend to Bill</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Enter their name to claim items and settle up.
+              Enter their name so they can claim items and settle up.
             </p>
             <form onSubmit={handleAddUser} className="space-y-3">
               <input
                 type="text"
                 required
-                placeholder="e.g. Sarah, Marcus, David"
+                placeholder="e.g. Kenji, Sarah, Mateo"
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
@@ -233,7 +222,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
                   type="submit"
                   className="rounded-xl bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 cursor-pointer"
                 >
-                  Add
+                  Add Friend
                 </button>
               </div>
             </form>
@@ -241,25 +230,25 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
         </div>
       )}
 
-      {/* Host Payout Destination Modal */}
-      {showBankModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+      {/* Host Payout Destination Details Modal */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl text-slate-900">
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">Host Payout Account</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Host Payment Destination</h3>
             <p className="text-xs text-slate-500 mb-4">
               Send your share directly to the organizer using these details:
             </p>
             <div className="space-y-2 rounded-2xl bg-slate-50 border border-slate-100 p-4 text-xs mb-4">
               <div className="flex justify-between">
-                <span className="text-slate-400 font-normal">Host Name</span>
+                <span className="text-slate-400 font-normal">Organizer</span>
                 <span className="font-semibold text-slate-800">{room.organizer.payout.accountName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400 font-normal">Bank / Rail</span>
+                <span className="text-slate-400 font-normal">Method / Rail</span>
                 <span className="font-semibold text-slate-800">{room.organizer.payout.bankName}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-normal">Account / Handle</span>
+                <span className="text-slate-400 font-normal">Handle / Link / IBAN</span>
                 <span className="font-mono font-semibold text-blue-600">{room.organizer.payout.accountNumber}</span>
               </div>
               {room.organizer.payout.note && (
@@ -272,7 +261,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowBankModal(false)}
+                onClick={() => setShowPayoutModal(false)}
                 className="rounded-xl px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 Close

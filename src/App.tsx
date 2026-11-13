@@ -7,21 +7,20 @@ import { LandingHero } from './components/LandingHero';
 import { RoomHeader } from './components/RoomHeader';
 import { ClaimItemsTab } from './components/ClaimItemsTab';
 import { LiveLedgerTab } from './components/LiveLedgerTab';
-import { TransferKeypadScreen } from './components/TransferKeypadScreen';
 import { SummaryCardTab } from './components/SummaryCardTab';
-import { PaymentProofModal } from './components/PaymentProofModal';
+import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav } from './components/BottomNav';
 
 export function App() {
   const [room, setRoom] = useState<Room | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'LEDGER' | 'CLAIM' | 'TRANSFER' | 'SUMMARY'>('LEDGER');
+  const [activeTab, setActiveTab] = useState<'CLAIM' | 'LEDGER' | 'SUMMARY'>('CLAIM');
   const [hasShareCopied, setHasShareCopied] = useState(false);
   
   // Modal states
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
 
   // Check URL query on mount (e.g. ?demo=usd or ?demo=eur)
@@ -32,7 +31,6 @@ export function App() {
     if (demo === 'eur') {
       loadSampleRoom('EUR');
     } else {
-      // Default to global USD sample
       loadSampleRoom('USD');
     }
   }, []);
@@ -41,11 +39,11 @@ export function App() {
     const sample = type === 'EUR' ? SAMPLE_ROOM_GLOBAL_EUR : SAMPLE_ROOM_GLOBAL_USD;
     setRoom(sample);
     if (sample.participants.length > 0) {
-      // Default to Jordan (unpaid user) or Alex
+      // Default to Jordan (unpaid user) to let judges test claiming and paying right away
       const unpaid = sample.participants.find(p => p.paymentStatus === 'UNPAID');
       setCurrentUserId(unpaid ? unpaid.id : sample.participants[0].id);
     }
-    setActiveTab('LEDGER');
+    setActiveTab('CLAIM');
   };
 
   const handleCreateRoom = (roomData: Partial<Room>) => {
@@ -54,7 +52,7 @@ export function App() {
     if (fullRoom.participants.length > 0) {
       setCurrentUserId(fullRoom.participants[0].id);
     }
-    setActiveTab('LEDGER');
+    setActiveTab('CLAIM');
   };
 
   const handleToggleClaim = (itemId: string, participantId: string) => {
@@ -126,7 +124,7 @@ export function App() {
     });
   };
 
-  // Live Transaction Recording Engine
+  // Transaction Recording Engine
   const handleRecordTransaction = (newTx: Transaction) => {
     if (!room) return;
     const updatedTransactions = [newTx, ...(room.transactions || [])];
@@ -168,17 +166,11 @@ export function App() {
       participants: updatedParticipants,
       transactions: updatedTransactions,
     });
-
-    // Show transaction receipt slip immediately
-    setSelectedTxForReceipt(newTx);
   };
 
-  const handleOpenUploadProof = (participantId: string) => {
-    const target = room?.participants.find((p) => p.id === participantId);
-    if (target) {
-      setActiveModalUser(target);
-      setIsModalOpen(true);
-    }
+  const handleOpenSettleModal = (participant: Participant) => {
+    setActiveModalUser(participant);
+    setIsSettleModalOpen(true);
   };
 
   const handleShare = () => {
@@ -200,6 +192,9 @@ export function App() {
 
   const splitResult = room ? calculateProportionalSplit(room) : null;
   const userBreakdown = splitResult?.participantBreakdowns[currentUser.id];
+  const unsettledParticipantsCount = room?.participants.filter(
+    (p) => (splitResult?.participantBreakdowns[p.id]?.amountRemaining || 0) > 0
+  ).length || 0;
 
   return (
     <div className="min-h-screen bg-slate-900 sm:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 selection:bg-blue-600 selection:text-white">
@@ -221,10 +216,10 @@ export function App() {
             />
           </div>
         ) : splitResult ? (
-          /* Mobile Frame: edge-to-edge on phones, sleek centered iPhone canvas on desktop */
+          /* Mobile App Viewport: edge-to-edge on phones, centered clean canvas on desktop */
           <div className="w-full sm:max-w-md bg-white sm:rounded-[36px] shadow-2xl flex flex-col min-h-screen sm:min-h-[820px] sm:max-h-[880px] overflow-hidden border border-slate-800/40 relative">
             
-            {/* Top Navy Header & Recent Contacts (Template 3 Style) */}
+            {/* Top Navy Header & Recent Contacts */}
             <RoomHeader
               room={room}
               splitResult={splitResult}
@@ -232,30 +227,12 @@ export function App() {
               onAddParticipant={handleAddParticipant}
               onSwitchUser={(id) => setCurrentUserId(id)}
               onShare={handleShare}
-              onOpenTransferKeypad={() => setActiveTab('TRANSFER')}
+              onOpenSettleUp={() => handleOpenSettleModal(currentUser)}
               onOpenAddItem={() => setActiveTab('CLAIM')}
             />
 
-            {/* Content Tabs (Ledger / Claim / Transfer / Summary) */}
+            {/* Content Tabs (Claim / Ledger / Summary) */}
             <div className="flex-1 bg-white px-4 pt-3 overflow-y-auto flex flex-col scrollbar-none">
-              {activeTab === 'LEDGER' && (
-                <LiveLedgerTab
-                  room={room}
-                  splitResult={splitResult}
-                  currentUser={currentUser}
-                  onOpenUploadProof={handleOpenUploadProof}
-                  onOpenTransferKeypad={(p) => {
-                    if (p) setCurrentUserId(p.id);
-                    setActiveTab('TRANSFER');
-                  }}
-                  onInspectForensics={(p) => {
-                    setActiveModalUser(p);
-                    setIsModalOpen(true);
-                  }}
-                  onViewTransactionReceipt={(tx) => setSelectedTxForReceipt(tx)}
-                />
-              )}
-
               {activeTab === 'CLAIM' && (
                 <ClaimItemsTab
                   room={room}
@@ -265,18 +242,14 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'TRANSFER' && (
-                <TransferKeypadScreen
+              {activeTab === 'LEDGER' && (
+                <LiveLedgerTab
                   room={room}
+                  splitResult={splitResult}
                   currentUser={currentUser}
-                  recipientUser={room.participants.find((p) => p.isOrganizer)}
-                  owedAmount={userBreakdown?.totalOwed || 0}
-                  remainingAmount={userBreakdown?.amountRemaining || 0}
-                  onBack={() => setActiveTab('LEDGER')}
-                  onCompleteTransfer={(tx) => {
-                    handleRecordTransaction(tx);
-                    setActiveTab('LEDGER');
-                  }}
+                  onOpenSettleModal={handleOpenSettleModal}
+                  onInspectForensics={(p) => handleOpenSettleModal(p)}
+                  onViewTransactionReceipt={(tx) => setSelectedTxForReceipt(tx)}
                 />
               )}
 
@@ -289,29 +262,26 @@ export function App() {
               )}
             </div>
 
-            {/* Docked / Floating Mobile Bottom Navigation Bar (Template 3 Style) */}
-            {activeTab !== 'TRANSFER' && (
-              <BottomNav
-                activeTab={activeTab}
-                onSelectTab={setActiveTab}
-                onCenterAction={() => {
-                  if (currentUser) {
-                    setActiveModalUser(currentUser);
-                    setIsModalOpen(true);
-                  }
-                }}
-                itemCount={room.items.length}
-                transactionCount={room.transactions?.length || 0}
-              />
-            )}
+            {/* Floating Mobile Bottom Navigation Bar */}
+            <BottomNav
+              activeTab={activeTab}
+              onSelectTab={setActiveTab}
+              onCenterAction={() => {
+                if (currentUser) {
+                  handleOpenSettleModal(currentUser);
+                }
+              }}
+              itemCount={room.items.length}
+              unsettledCount={unsettledParticipantsCount}
+            />
           </div>
         ) : null}
       </main>
 
-      {/* Forensic Verification Modal (Engine B) */}
-      {isModalOpen && activeModalUser && room && splitResult && (
-        <PaymentProofModal
-          isOpen={isModalOpen}
+      {/* Settle Up & Forensic Verifier Modal */}
+      {isSettleModalOpen && activeModalUser && room && splitResult && (
+        <SettleUpModal
+          isOpen={isSettleModalOpen}
           participant={activeModalUser}
           room={room}
           owedAmount={
@@ -321,7 +291,7 @@ export function App() {
             splitResult.participantBreakdowns[activeModalUser.id]?.amountRemaining || 0
           }
           onClose={() => {
-            setIsModalOpen(false);
+            setIsSettleModalOpen(false);
             setActiveModalUser(null);
           }}
           onRecordTransaction={handleRecordTransaction}

@@ -18,6 +18,12 @@ export function getCurrencySymbol(currency: Currency): string {
       return '€';
     case 'GBP':
       return '£';
+    case 'JPY':
+      return '¥';
+    case 'INR':
+      return '₹';
+    case 'BRL':
+      return 'R$';
     case 'CAD':
       return 'CA$';
     case 'AUD':
@@ -36,10 +42,11 @@ export function getCurrencySymbol(currency: Currency): string {
  */
 export function formatMoney(amount: number, currency: Currency = 'USD'): string {
   const symbol = getCurrencySymbol(currency);
-  const rounded = roundToTwo(amount);
+  const isZeroDecimal = currency === 'JPY';
+  const rounded = isZeroDecimal ? Math.round(amount) : roundToTwo(amount);
   const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: isZeroDecimal ? 0 : 2,
+    maximumFractionDigits: isZeroDecimal ? 0 : 2,
   }).format(rounded);
   return `${symbol}${formatted}`;
 }

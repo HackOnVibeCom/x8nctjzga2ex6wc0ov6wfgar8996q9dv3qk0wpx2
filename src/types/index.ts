@@ -1,4 +1,4 @@
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'SGD' | 'NGN';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'SGD' | 'INR' | 'BRL' | 'NGN';
 
 export interface LineItem {
   id: string;
