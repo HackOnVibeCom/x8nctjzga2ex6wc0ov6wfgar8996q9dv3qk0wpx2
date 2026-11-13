@@ -1,0 +1,268 @@
+import { Room } from '../types';
+
+export const SAMPLE_ROOM_GLOBAL_USD: Room = {
+  id: 'soho-bistro-ny-102',
+  title: 'Friday Team Dinner @ SoHo Bistro & Wine Bar',
+  currency: 'USD',
+  currencySymbol: '$',
+  organizer: {
+    id: 'p-alex',
+    name: 'Alex (Host)',
+    payout: {
+      bankName: 'Chase QuickPay / Zelle',
+      accountNumber: 'alex.miller@chase.me',
+      accountName: 'Alex Miller',
+      note: 'Please add "Dinner" in payment memo!',
+    },
+  },
+  items: [
+    {
+      id: 'item-1',
+      rawName: 'PRIME DRY-AGED T-BONE 24OZ',
+      cleanName: 'Prime Dry-Aged T-Bone Steak (24oz)',
+      quantity: 1,
+      unitPrice: 84.0,
+      totalPrice: 84.0,
+      claimedBy: ['p-alex', 'p-elena'], // Shared between Alex and Elena
+    },
+    {
+      id: 'item-2',
+      rawName: 'PAN-SEARED CHILEAN SEABASS',
+      cleanName: 'Pan-Seared Chilean Seabass & Asparagus',
+      quantity: 1,
+      unitPrice: 46.0,
+      totalPrice: 46.0,
+      claimedBy: ['p-marcus'], // Claimed by Marcus
+    },
+    {
+      id: 'item-3',
+      rawName: 'WILD TRUFFLE RIGATONI',
+      cleanName: 'Wild Black Truffle Rigatoni',
+      quantity: 1,
+      unitPrice: 38.0,
+      totalPrice: 38.0,
+      claimedBy: ['p-jordan'], // Claimed by Jordan
+    },
+    {
+      id: 'item-4',
+      rawName: 'NAPA CABERNET BOTTLE 2021',
+      cleanName: 'Napa Valley Reserve Cabernet (Bottle)',
+      quantity: 1,
+      unitPrice: 95.0,
+      totalPrice: 95.0,
+      claimedBy: ['p-alex', 'p-elena', 'p-marcus'], // 3-way split
+    },
+    {
+      id: 'item-5',
+      rawName: 'WARM CHOC LAVA CAKE X2',
+      cleanName: 'Warm Valrhona Chocolate Lava Cake (x2)',
+      quantity: 2,
+      unitPrice: 9.0,
+      totalPrice: 18.0,
+      claimedBy: [], // Unclaimed item demo!
+    },
+  ],
+  subtotal: 281.0,
+  tax: 24.94, // 8.875% NYC Sales Tax
+  serviceFee: 50.58, // 18% Gratuity
+  deliveryFee: 0,
+  discount: 0,
+  grandTotal: 356.52,
+  participants: [
+    {
+      id: 'p-alex',
+      name: 'Alex',
+      avatarColor: 'from-violet-500 to-indigo-600',
+      isOrganizer: true,
+      paymentStatus: 'VERIFIED',
+      paymentProof: {
+        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        uploadedAt: '2026-11-13T07:15:00Z',
+        forensics: {
+          elaScore: 12,
+          elaRiskLevel: 'LOW',
+          tamperDetected: false,
+          extractedData: {
+            senderName: 'Alex Miller',
+            recipientName: 'SoHo Bistro LLC',
+            amountPaid: 356.52,
+            transactionDate: '13 Nov 2026, 09:14 PM',
+            referenceId: 'CHASE-TRX-948102934',
+            bankOrProvider: 'Chase Bank',
+          },
+          verifiedAt: '2026-11-13T07:15:30Z',
+        },
+      },
+    },
+    {
+      id: 'p-elena',
+      name: 'Elena',
+      avatarColor: 'from-emerald-500 to-teal-600',
+      paymentStatus: 'VERIFIED',
+      paymentProof: {
+        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        uploadedAt: '2026-11-13T07:42:00Z',
+        forensics: {
+          elaScore: 16,
+          elaRiskLevel: 'LOW',
+          tamperDetected: false,
+          extractedData: {
+            senderName: 'Elena Rostova',
+            recipientName: 'Alex Miller',
+            amountPaid: 93.52,
+            transactionDate: '13 Nov 2026, 09:40 PM',
+            referenceId: 'APPL-CASH-44910283',
+            bankOrProvider: 'Apple Cash / Zelle',
+          },
+          verifiedAt: '2026-11-13T07:42:15Z',
+        },
+      },
+    },
+    {
+      id: 'p-marcus',
+      name: 'Marcus',
+      avatarColor: 'from-amber-500 to-orange-600',
+      paymentStatus: 'PARTIAL_OR_MISMATCH',
+      paymentProof: {
+        imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        uploadedAt: '2026-11-13T07:55:00Z',
+        forensics: {
+          elaScore: 82,
+          elaRiskLevel: 'HIGH',
+          tamperDetected: true,
+          tamperReason: 'Detected inconsistent compression artifacts around amount digits "$30.00"',
+          mismatchDetails: 'Receipt screenshot shows $30.00, but owed portion is $98.62',
+          extractedData: {
+            senderName: 'Marcus Vance',
+            recipientName: 'Alex Miller',
+            amountPaid: 30.0,
+            transactionDate: '13 Nov 2026, 09:50 PM',
+            referenceId: 'VNM-TRX-1930291',
+            bankOrProvider: 'Venmo',
+          },
+          verifiedAt: '2026-11-13T07:55:20Z',
+        },
+      },
+    },
+    {
+      id: 'p-jordan',
+      name: 'Jordan',
+      avatarColor: 'from-sky-500 to-blue-600',
+      paymentStatus: 'UNPAID',
+    },
+  ],
+  transactions: [
+    {
+      id: 'tx-101',
+      senderId: 'p-elena',
+      senderName: 'Elena',
+      recipientName: 'Alex Miller',
+      amount: 93.52,
+      currency: 'USD',
+      method: 'RECEIPT_UPLOAD',
+      referenceId: 'APPL-CASH-44910283',
+      timestamp: 'Today, 09:40 PM',
+      status: 'COMPLETED',
+      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'tx-102',
+      senderId: 'p-marcus',
+      senderName: 'Marcus',
+      recipientName: 'Alex Miller',
+      amount: 30.0,
+      currency: 'USD',
+      method: 'RECEIPT_UPLOAD',
+      referenceId: 'VNM-TRX-1930291',
+      timestamp: 'Today, 09:50 PM',
+      status: 'FLAGGED_MISMATCH',
+      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+      notes: 'Screenshot shows $30.00, but owed share is $98.62 (Underpaid by $68.62).',
+    },
+  ],
+  createdAt: new Date().toISOString(),
+};
+
+export const SAMPLE_ROOM_GLOBAL_EUR: Room = {
+  id: 'berlin-craft-tap-204',
+  title: 'Mitte Craft Beer & Tasting Dinner (Berlin)',
+  currency: 'EUR',
+  currencySymbol: '€',
+  organizer: {
+    id: 'p-lukas',
+    name: 'Lukas (Host)',
+    payout: {
+      bankName: 'Revolut / N26',
+      accountNumber: 'revolut.me/lukassplits',
+      accountName: 'Lukas Schmidt',
+      note: 'Revolut or SEPA transfer',
+    },
+  },
+  items: [
+    {
+      id: 'e-1',
+      rawName: 'ARTISANAL BURGER TRIO',
+      cleanName: 'Wagyu Smashburger Platter',
+      quantity: 1,
+      unitPrice: 42.0,
+      totalPrice: 42.0,
+      claimedBy: ['p-lukas', 'p-sophie'],
+    },
+    {
+      id: 'e-2',
+      rawName: 'TRUFFLE FRIES & PARMESAN',
+      cleanName: 'Hand-Cut Truffle Parmesan Fries',
+      quantity: 1,
+      unitPrice: 14.5,
+      totalPrice: 14.5,
+      claimedBy: ['p-sophie'],
+    },
+    {
+      id: 'e-3',
+      rawName: 'CRAFT IPA PITCHER X2',
+      cleanName: 'BRLO Craft IPA Pitcher (x2)',
+      quantity: 2,
+      unitPrice: 18.0,
+      totalPrice: 36.0,
+      claimedBy: ['p-lukas', 'p-sophie', 'p-matteo'],
+    },
+    {
+      id: 'e-4',
+      rawName: 'WARM APFELSTRUDEL',
+      cleanName: 'Warm Apple Strudel & Vanilla Gelato',
+      quantity: 1,
+      unitPrice: 11.5,
+      totalPrice: 11.5,
+      claimedBy: [],
+    },
+  ],
+  subtotal: 104.0,
+  tax: 19.76, // 19% MwSt
+  serviceFee: 10.4, // 10% Service
+  deliveryFee: 0,
+  discount: 0,
+  grandTotal: 134.16,
+  participants: [
+    {
+      id: 'p-lukas',
+      name: 'Lukas',
+      avatarColor: 'from-purple-500 to-indigo-600',
+      isOrganizer: true,
+      paymentStatus: 'VERIFIED',
+    },
+    {
+      id: 'p-sophie',
+      name: 'Sophie',
+      avatarColor: 'from-emerald-500 to-teal-600',
+      paymentStatus: 'UNPAID',
+    },
+    {
+      id: 'p-matteo',
+      name: 'Matteo',
+      avatarColor: 'from-amber-500 to-red-600',
+      paymentStatus: 'UNPAID',
+    },
+  ],
+  transactions: [],
+  createdAt: new Date().toISOString(),
+};
