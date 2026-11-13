@@ -34,8 +34,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-sm font-semibold tracking-tight text-white">
                 Ipin
               </span>
-              <span className="rounded-full bg-blue-500/20 px-1.5 py-0.2 text-[9px] font-medium text-blue-300">
-                Split
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-medium text-emerald-300 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live SQL
               </span>
             </div>
             {isInRoom && roomTitle ? (

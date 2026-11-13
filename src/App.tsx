@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Room, Participant, LineItem, Transaction } from './types';
 import { SAMPLE_ROOM_GLOBAL_USD, SAMPLE_ROOM_GLOBAL_EUR, SAMPLE_ROOM_GLOBAL_JPY } from './data/sampleReceipt';
 import { calculateProportionalSplit } from './utils/splitMath';
@@ -11,6 +11,15 @@ import { SummaryCardTab } from './components/SummaryCardTab';
 import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav } from './components/BottomNav';
+import { 
+  fetchRoomFromDb, 
+  saveNewRoomToDb, 
+  updateItemClaimInDb, 
+  addParticipantToDb, 
+  addCustomItemToDb, 
+  recordTransactionToDb,
+  subscribeToRoom 
+} from './services/supabase';
 
 export function App() {
   const [room, setRoom] = useState<Room | null>(() => {
@@ -23,13 +32,14 @@ export function App() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'CLAIM' | 'LEDGER' | 'SUMMARY'>('CLAIM');
   const [hasShareCopied, setHasShareCopied] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Modal states
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
 
-  // Sync state to localStorage on changes
+  // Sync state to localStorage as fallback
   useEffect(() => {
     if (room) {
       try {
@@ -38,62 +48,101 @@ export function App() {
     }
   }, [room]);
 
-  // Check URL query on mount (e.g. ?demo=usd, ?demo=eur, ?demo=jpy)
+  // Refresh room from Supabase
+  const refreshRoom = useCallback(async (roomId: string) => {
+    setIsSyncing(true);
+    const dbRoom = await fetchRoomFromDb(roomId);
+    if (dbRoom) {
+      setRoom(dbRoom);
+    }
+    setIsSyncing(false);
+  }, []);
+
+  // Check URL query on mount (?r=roomId, ?demo=usd, etc.)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('r') || params.get('room');
     const demo = params.get('demo');
 
-    if (demo === 'eur') {
+    if (roomId) {
+      // Fetch live room from Supabase
+      refreshRoom(roomId);
+    } else if (demo === 'eur') {
       loadSampleRoom('EUR');
     } else if (demo === 'jpy') {
       loadSampleRoom('JPY');
     } else if (demo === 'usd') {
       loadSampleRoom('USD');
-    } else if (!room) {
-      // Default to global USD sample if no saved room exists
-      loadSampleRoom('USD');
     }
-  }, []);
+  }, [refreshRoom]);
 
-  const loadSampleRoom = (type: 'USD' | 'EUR' | 'JPY') => {
+  // Subscribe to real-time updates when a room is active
+  useEffect(() => {
+    if (!room?.id) return;
+
+    const unsubscribe = subscribeToRoom(room.id, () => {
+      refreshRoom(room.id);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [room?.id, refreshRoom]);
+
+  const loadSampleRoom = async (type: 'USD' | 'EUR' | 'JPY') => {
     const sample = type === 'EUR' 
       ? SAMPLE_ROOM_GLOBAL_EUR 
       : type === 'JPY' 
       ? SAMPLE_ROOM_GLOBAL_JPY 
       : SAMPLE_ROOM_GLOBAL_USD;
+
     setRoom(sample);
     if (sample.participants.length > 0) {
-      // Default to unpaid user to let judges test claiming and paying right away
       const unpaid = sample.participants.find(p => p.paymentStatus === 'UNPAID');
       setCurrentUserId(unpaid ? unpaid.id : sample.participants[0].id);
     }
     setActiveTab('CLAIM');
+
+    // Sync to Supabase so it's live on PostgreSQL immediately
+    saveNewRoomToDb(sample).catch(() => {});
   };
 
-  const handleCreateRoom = (roomData: Partial<Room>) => {
+  const handleCreateRoom = async (roomData: Partial<Room>) => {
     const fullRoom = roomData as Room;
     setRoom(fullRoom);
     if (fullRoom.participants.length > 0) {
       setCurrentUserId(fullRoom.participants[0].id);
     }
     setActiveTab('CLAIM');
+
+    // Save to real Supabase PostgreSQL
+    await saveNewRoomToDb(fullRoom);
+
+    // Update URL to ?r=<roomId>
+    const newUrl = `${window.location.pathname}?r=${fullRoom.id}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
   };
 
   const handleToggleClaim = (itemId: string, participantId: string) => {
     if (!room) return;
+    let updatedClaimers: string[] = [];
+
     const updatedItems = room.items.map((item) => {
       if (item.id === itemId) {
         const currentClaimers = item.claimedBy || [];
         const isClaimed = currentClaimers.includes(participantId);
-        const newClaimers = isClaimed
+        updatedClaimers = isClaimed
           ? currentClaimers.filter((id) => id !== participantId)
           : [...currentClaimers, participantId];
-        return { ...item, claimedBy: newClaimers };
+        return { ...item, claimedBy: updatedClaimers };
       }
       return item;
     });
 
     setRoom({ ...room, items: updatedItems });
+
+    // Sync to Supabase in background
+    updateItemClaimInDb(itemId, updatedClaimers).catch(() => {});
   };
 
   const handleAddParticipant = (name: string) => {
@@ -118,6 +167,9 @@ export function App() {
       participants: [...room.participants, newParticipant],
     });
     setCurrentUserId(newId);
+
+    // Sync to Supabase
+    addParticipantToDb(room.id, newParticipant).catch(() => {});
   };
 
   const handleAddCustomItem = (newItem: Partial<LineItem>) => {
@@ -138,49 +190,48 @@ export function App() {
     const serviceFee = Math.round((newSubtotal * 0.18) * 100) / 100;
     const grandTotal = Math.round((newSubtotal + tax + serviceFee) * 100) / 100;
 
+    const newTotals = { subtotal: newSubtotal, tax, serviceFee, grandTotal };
+
     setRoom({
       ...room,
       items: updatedItems,
-      subtotal: newSubtotal,
-      tax,
-      serviceFee,
-      grandTotal,
+      ...newTotals,
     });
+
+    // Sync to Supabase
+    addCustomItemToDb(room.id, fullItem, newTotals).catch(() => {});
   };
 
-  // Transaction Recording Engine
+  // Transaction Recording Engine (1-Tap or ELA Forensic Upload)
   const handleRecordTransaction = (newTx: Transaction) => {
     if (!room) return;
     const updatedTransactions = [newTx, ...(room.transactions || [])];
 
+    let participantUpdate: { participantId: string; status: string; proof?: any } | undefined;
+
     // Update participant payment status
     const updatedParticipants = room.participants.map((p) => {
       if (p.id === newTx.senderId) {
-        if (newTx.status === 'COMPLETED') {
-          return {
-            ...p,
-            paymentStatus: 'VERIFIED' as const,
-            paymentProof: newTx.proofUrl
-              ? {
-                  imageUrl: newTx.proofUrl,
-                  uploadedAt: new Date().toISOString(),
-                  forensics: newTx.forensics,
-                }
-              : p.paymentProof,
-          };
-        } else if (newTx.status === 'FLAGGED_MISMATCH') {
-          return {
-            ...p,
-            paymentStatus: 'PARTIAL_OR_MISMATCH' as const,
-            paymentProof: newTx.proofUrl
-              ? {
-                  imageUrl: newTx.proofUrl,
-                  uploadedAt: new Date().toISOString(),
-                  forensics: newTx.forensics,
-                }
-              : p.paymentProof,
-          };
-        }
+        const nextStatus = newTx.status === 'COMPLETED' ? ('VERIFIED' as const) : ('PARTIAL_OR_MISMATCH' as const);
+        const proof = newTx.proofUrl
+          ? {
+              imageUrl: newTx.proofUrl,
+              uploadedAt: new Date().toISOString(),
+              forensics: newTx.forensics,
+            }
+          : p.paymentProof;
+
+        participantUpdate = {
+          participantId: p.id,
+          status: nextStatus,
+          proof,
+        };
+
+        return {
+          ...p,
+          paymentStatus: nextStatus,
+          paymentProof: proof,
+        };
       }
       return p;
     });
@@ -190,6 +241,9 @@ export function App() {
       participants: updatedParticipants,
       transactions: updatedTransactions,
     });
+
+    // Sync to Supabase
+    recordTransactionToDb(room.id, newTx, participantUpdate).catch(() => {});
   };
 
   const handleOpenSettleModal = (participant: Participant) => {
@@ -198,8 +252,10 @@ export function App() {
   };
 
   const handleShare = () => {
-    const url = window.location.href;
-    const text = `Hey! Here is our bill split on IPIN for "${room?.title}": ${url}\nTap the items you ordered to claim your share & settle up! 🧾`;
+    // Ensure URL has ?r=<roomId>
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = room?.id ? `${baseUrl}?r=${room.id}` : window.location.href;
+    const text = `Hey! Here is our bill split on IPIN for "${room?.title}": ${shareUrl}\nTap your name to claim your items & settle up! 🧾`;
     navigator.clipboard.writeText(text);
     setHasShareCopied(true);
     setTimeout(() => setHasShareCopied(false), 2500);
@@ -215,7 +271,6 @@ export function App() {
     };
 
   const splitResult = room ? calculateProportionalSplit(room) : null;
-  const userBreakdown = splitResult?.participantBreakdowns[currentUser.id];
   const unsettledParticipantsCount = room?.participants.filter(
     (p) => (splitResult?.participantBreakdowns[p.id]?.amountRemaining || 0) > 0
   ).length || 0;
@@ -226,6 +281,8 @@ export function App() {
       <Navbar
         onNewBill={() => {
           try { localStorage.removeItem('ipin_saved_room'); } catch {}
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.pushState({}, '', cleanUrl);
           setRoom(null);
         }}
         onTryDemo={(currency) => loadSampleRoom(currency || 'USD')}
@@ -290,7 +347,7 @@ export function App() {
               )}
             </div>
 
-            {/* Floating Mobile Bottom Navigation Bar */}
+            {/* Floating Mobile Bottom Navigation Bar (4 Equal Buttons) */}
             <BottomNav
               activeTab={activeTab}
               onSelectTab={setActiveTab}
