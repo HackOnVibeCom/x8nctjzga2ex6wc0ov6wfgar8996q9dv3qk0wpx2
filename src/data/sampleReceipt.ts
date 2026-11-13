@@ -1,268 +1,51 @@
-import { Room } from '../types';
+import { Room, Currency } from '../types';
+import { getCurrencySymbol } from '../utils/splitMath';
 
-export const SAMPLE_ROOM_GLOBAL_USD: Room = {
-  id: 'soho-bistro-ny-102',
-  title: 'Friday Team Dinner @ SoHo Bistro & Wine Bar',
-  currency: 'USD',
-  currencySymbol: '$',
-  organizer: {
-    id: 'p-alex',
-    name: 'Alex (Host)',
-    payout: {
-      bankName: 'PayPal / Zelle',
-      accountNumber: 'paypal.me/alexmiller',
-      accountName: 'Alex Miller',
-      note: 'Please add "Dinner" in payment memo!',
-    },
-  },
-  items: [
-    {
-      id: 'item-1',
-      rawName: 'PRIME DRY-AGED T-BONE 24OZ',
-      cleanName: 'Prime Dry-Aged T-Bone Steak (24oz)',
-      quantity: 1,
-      unitPrice: 84.0,
-      totalPrice: 84.0,
-      claimedBy: ['p-alex', 'p-elena'],
-    },
-    {
-      id: 'item-2',
-      rawName: 'PAN-SEARED CHILEAN SEABASS',
-      cleanName: 'Pan-Seared Chilean Seabass & Asparagus',
-      quantity: 1,
-      unitPrice: 46.0,
-      totalPrice: 46.0,
-      claimedBy: ['p-marcus'],
-    },
-    {
-      id: 'item-3',
-      rawName: 'WILD TRUFFLE RIGATONI',
-      cleanName: 'Wild Black Truffle Rigatoni',
-      quantity: 1,
-      unitPrice: 38.0,
-      totalPrice: 38.0,
-      claimedBy: ['p-jordan'],
-    },
-    {
-      id: 'item-4',
-      rawName: 'NAPA CABERNET BOTTLE 2021',
-      cleanName: 'Napa Valley Reserve Cabernet (Bottle)',
-      quantity: 1,
-      unitPrice: 95.0,
-      totalPrice: 95.0,
-      claimedBy: ['p-alex', 'p-elena', 'p-marcus'],
-    },
-    {
-      id: 'item-5',
-      rawName: 'WARM CHOC LAVA CAKE X2',
-      cleanName: 'Warm Valrhona Chocolate Lava Cake (x2)',
-      quantity: 2,
-      unitPrice: 9.0,
-      totalPrice: 18.0,
-      claimedBy: [],
-    },
-  ],
-  subtotal: 281.0,
-  tax: 24.94,
-  serviceFee: 50.58,
-  deliveryFee: 0,
-  discount: 0,
-  grandTotal: 356.52,
-  participants: [
-    {
-      id: 'p-alex',
-      name: 'Alex',
-      avatarColor: 'from-violet-500 to-indigo-600',
-      isOrganizer: true,
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-elena',
-      name: 'Elena',
-      avatarColor: 'from-emerald-500 to-teal-600',
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-marcus',
-      name: 'Marcus',
-      avatarColor: 'from-amber-500 to-orange-600',
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-jordan',
-      name: 'Jordan',
-      avatarColor: 'from-sky-500 to-blue-600',
-      paymentStatus: 'UNPAID',
-    },
-  ],
-  transactions: [],
-  createdAt: new Date().toISOString(),
-};
+/**
+ * Clean Room Factory for Production
+ * Creates fresh rooms with zero mocked data, zero fake transactions, and clean initial states.
+ */
+export function createEmptyRoom(
+  title: string,
+  currency: Currency = 'USD',
+  hostName: string = 'Host',
+  bankName: string = '',
+  accountNumber: string = ''
+): Room {
+  const hostId = `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+  const roomId = `room-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
-export const SAMPLE_ROOM_GLOBAL_EUR: Room = {
-  id: 'berlin-craft-tap-204',
-  title: 'Mitte Craft Beer & Tasting Dinner (Berlin)',
-  currency: 'EUR',
-  currencySymbol: '€',
-  organizer: {
-    id: 'p-lukas',
-    name: 'Lukas (Host)',
-    payout: {
-      bankName: 'Revolut / N26',
-      accountNumber: 'revolut.me/lukassplits',
-      accountName: 'Lukas Schmidt',
-      note: 'Revolut or SEPA transfer',
+  return {
+    id: roomId,
+    title: title.trim() || 'New Bill Split',
+    currency,
+    currencySymbol: getCurrencySymbol(currency),
+    organizer: {
+      id: hostId,
+      name: hostName.trim() || 'Host',
+      payout: {
+        bankName: bankName.trim() || 'Direct Transfer',
+        accountNumber: accountNumber.trim() || '',
+        accountName: hostName.trim() || 'Host',
+      },
     },
-  },
-  items: [
-    {
-      id: 'e-1',
-      rawName: 'ARTISANAL BURGER TRIO',
-      cleanName: 'Wagyu Smashburger Platter',
-      quantity: 1,
-      unitPrice: 42.0,
-      totalPrice: 42.0,
-      claimedBy: ['p-lukas', 'p-sophie'],
-    },
-    {
-      id: 'e-2',
-      rawName: 'TRUFFLE FRIES & PARMESAN',
-      cleanName: 'Hand-Cut Truffle Parmesan Fries',
-      quantity: 1,
-      unitPrice: 14.5,
-      totalPrice: 14.5,
-      claimedBy: ['p-sophie'],
-    },
-    {
-      id: 'e-3',
-      rawName: 'CRAFT IPA PITCHER X2',
-      cleanName: 'BRLO Craft IPA Pitcher (x2)',
-      quantity: 2,
-      unitPrice: 18.0,
-      totalPrice: 36.0,
-      claimedBy: ['p-lukas', 'p-sophie', 'p-matteo'],
-    },
-    {
-      id: 'e-4',
-      rawName: 'WARM APFELSTRUDEL',
-      cleanName: 'Warm Apple Strudel & Vanilla Gelato',
-      quantity: 1,
-      unitPrice: 11.5,
-      totalPrice: 11.5,
-      claimedBy: [],
-    },
-  ],
-  subtotal: 104.0,
-  tax: 19.76,
-  serviceFee: 10.4,
-  deliveryFee: 0,
-  discount: 0,
-  grandTotal: 134.16,
-  participants: [
-    {
-      id: 'p-lukas',
-      name: 'Lukas',
-      avatarColor: 'from-purple-500 to-indigo-600',
-      isOrganizer: true,
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-sophie',
-      name: 'Sophie',
-      avatarColor: 'from-emerald-500 to-teal-600',
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-matteo',
-      name: 'Matteo',
-      avatarColor: 'from-amber-500 to-red-600',
-      paymentStatus: 'UNPAID',
-    },
-  ],
-  transactions: [],
-  createdAt: new Date().toISOString(),
-};
-
-export const SAMPLE_ROOM_GLOBAL_JPY: Room = {
-  id: 'shinjuku-izakaya-305',
-  title: 'Shinjuku Yakitori & Sake Tasting (Tokyo)',
-  currency: 'JPY',
-  currencySymbol: '¥',
-  organizer: {
-    id: 'p-kenji',
-    name: 'Kenji (Host)',
-    payout: {
-      bankName: 'PayPay / Wise',
-      accountNumber: 'paypay.ne.jp/kenjisplits',
-      accountName: 'Kenji Sato',
-      note: 'PayPay or Wise instant transfer',
-    },
-  },
-  items: [
-    {
-      id: 'j-1',
-      rawName: 'YAKITORI PLATTER 10PC',
-      cleanName: 'Charcoal Yakitori Skewer Platter (10pc)',
-      quantity: 1,
-      unitPrice: 2400,
-      totalPrice: 2400,
-      claimedBy: ['p-kenji', 'p-aoi', 'p-hiro'],
-    },
-    {
-      id: 'j-2',
-      rawName: 'SASHIMI MORIAWASE',
-      cleanName: 'Fresh Tuna & Salmon Sashimi Set',
-      quantity: 1,
-      unitPrice: 2800,
-      totalPrice: 2800,
-      claimedBy: ['p-aoi', 'p-hiro'],
-    },
-    {
-      id: 'j-3',
-      rawName: 'JUNMAI DAIGINJO CARAFE',
-      cleanName: 'Dassai 23 Junmai Daiginjo Sake',
-      quantity: 1,
-      unitPrice: 3500,
-      totalPrice: 3500,
-      claimedBy: ['p-kenji', 'p-hiro'],
-    },
-    {
-      id: 'j-4',
-      rawName: 'MATCHA ICE CREAM X3',
-      cleanName: 'Kyoto Uji Matcha Gelato (x3)',
-      quantity: 3,
-      unitPrice: 400,
-      totalPrice: 1200,
-      claimedBy: [],
-    },
-  ],
-  subtotal: 9900,
-  tax: 990,
-  serviceFee: 500,
-  deliveryFee: 0,
-  discount: 0,
-  grandTotal: 11390,
-  participants: [
-    {
-      id: 'p-kenji',
-      name: 'Kenji',
-      avatarColor: 'from-blue-500 to-indigo-600',
-      isOrganizer: true,
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-aoi',
-      name: 'Aoi',
-      avatarColor: 'from-pink-500 to-rose-600',
-      paymentStatus: 'UNPAID',
-    },
-    {
-      id: 'p-hiro',
-      name: 'Hiro',
-      avatarColor: 'from-teal-500 to-emerald-600',
-      paymentStatus: 'UNPAID',
-    },
-  ],
-  transactions: [],
-  createdAt: new Date().toISOString(),
-};
+    items: [],
+    subtotal: 0,
+    tax: 0,
+    serviceFee: 0,
+    deliveryFee: 0,
+    discount: 0,
+    grandTotal: 0,
+    participants: [
+      {
+        id: hostId,
+        name: hostName.trim() || 'Host',
+        avatarColor: 'from-blue-600 to-indigo-700',
+        isOrganizer: true,
+        paymentStatus: 'UNPAID',
+      },
+    ],
+    transactions: [],
+    createdAt: new Date().toISOString(),
+  };
+}

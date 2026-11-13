@@ -24,16 +24,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
       <nav className="pointer-events-auto w-full max-w-sm rounded-full bg-white/95 backdrop-blur-md px-2 py-1.5 border border-slate-200/80 shadow-floating">
-        <div className="grid grid-cols-4 items-center">
+        <div className="grid grid-cols-4 items-center gap-1">
           
           {/* 1. Claim Items */}
           <button
             type="button"
             onClick={() => onSelectTab('CLAIM')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'CLAIM'
-                ? 'text-blue-600 font-semibold bg-blue-50/60'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'text-blue-600 font-semibold bg-blue-50/70'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
             }`}
           >
             <div className="relative">
@@ -51,10 +51,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('LEDGER')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'LEDGER'
-                ? 'text-blue-600 font-semibold bg-blue-50/60'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'text-blue-600 font-semibold bg-blue-50/70'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
             }`}
           >
             <div className="relative">
@@ -68,27 +68,27 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Ledger</span>
           </button>
 
-          {/* 3. Verify AI (Equal Button) */}
+          {/* 3. Verify AI */}
           <button
             type="button"
             onClick={onCenterAction}
             title="Scan & Verify Payment Screenshot"
-            className="flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50/40"
+            className="w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50/60"
           >
             <div className="relative">
-              <Scan className="h-5 w-5 stroke-[1.8] text-blue-600" />
+              <Scan className="h-5 w-5 stroke-[1.8]" />
             </div>
-            <span className="text-[10px] mt-1 tracking-tight leading-none font-medium">Verify AI</span>
+            <span className="text-[10px] mt-1 tracking-tight leading-none">Verify AI</span>
           </button>
 
           {/* 4. Summary & Export */}
           <button
             type="button"
             onClick={() => onSelectTab('SUMMARY')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'SUMMARY'
-                ? 'text-blue-600 font-semibold bg-blue-50/60'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'text-blue-600 font-semibold bg-blue-50/70'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
             }`}
           >
             <div className="relative">

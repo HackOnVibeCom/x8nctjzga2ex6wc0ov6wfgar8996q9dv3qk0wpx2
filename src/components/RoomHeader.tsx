@@ -204,7 +204,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Kenji, Sarah, Mateo"
+                placeholder="e.g. Sarah, Alex, David"
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"

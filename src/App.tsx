@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Room, Participant, LineItem, Transaction } from './types';
-import { SAMPLE_ROOM_GLOBAL_USD, SAMPLE_ROOM_GLOBAL_EUR, SAMPLE_ROOM_GLOBAL_JPY } from './data/sampleReceipt';
 import { calculateProportionalSplit } from './utils/splitMath';
 import { Navbar } from './components/Navbar';
 import { LandingHero } from './components/LandingHero';
@@ -27,12 +26,17 @@ export function App() {
       const saved = localStorage.getItem('ipin_saved_room');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Clean out legacy mock transactions if present
-        if (parsed.transactions && parsed.transactions.some((t: any) => t.id === 'tx-101' || t.id === 'tx-102')) {
-          parsed.transactions = [];
-          if (parsed.participants) {
-            parsed.participants.forEach((p: any) => { p.paymentStatus = 'UNPAID'; p.paymentProof = undefined; });
-          }
+        // Purge legacy mock data / demo rooms
+        const isLegacyMock = 
+          parsed.id?.includes('shinjuku') || 
+          parsed.id?.includes('soho') || 
+          parsed.id?.includes('berlin') ||
+          parsed.participants?.some((p: any) => 
+            p.name === 'Kenji' || p.name === 'Alex' || p.name === 'Elena' || p.name === 'Marcus' || p.name === 'Hiro' || p.name === 'Aoi'
+          );
+        if (isLegacyMock) {
+          localStorage.removeItem('ipin_saved_room');
+          return null;
         }
         return parsed;
       }
@@ -64,25 +68,21 @@ export function App() {
     const dbRoom = await fetchRoomFromDb(roomId);
     if (dbRoom) {
       setRoom(dbRoom);
+      if (dbRoom.participants.length > 0 && !currentUserId) {
+        setCurrentUserId(dbRoom.participants[0].id);
+      }
     }
     setIsSyncing(false);
-  }, []);
+  }, [currentUserId]);
 
-  // Check URL query on mount (?r=roomId, ?demo=usd, etc.)
+  // Check URL query on mount (?r=roomId)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('r') || params.get('room');
-    const demo = params.get('demo');
 
     if (roomId) {
-      // Fetch live room from Supabase
+      // Fetch live room from Supabase PostgreSQL
       refreshRoom(roomId);
-    } else if (demo === 'eur') {
-      loadSampleRoom('EUR');
-    } else if (demo === 'jpy') {
-      loadSampleRoom('JPY');
-    } else if (demo === 'usd') {
-      loadSampleRoom('USD');
     }
   }, [refreshRoom]);
 
@@ -99,37 +99,12 @@ export function App() {
     };
   }, [room?.id, refreshRoom]);
 
-  const loadSampleRoom = async (type: 'USD' | 'EUR' | 'JPY') => {
-    const baseSample = type === 'EUR' 
-      ? SAMPLE_ROOM_GLOBAL_EUR 
-      : type === 'JPY' 
-      ? SAMPLE_ROOM_GLOBAL_JPY 
-      : SAMPLE_ROOM_GLOBAL_USD;
-
-    const uniqueRoom: Room = {
-      ...baseSample,
-      id: `room-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
-      participants: baseSample.participants.map(p => ({
-        ...p,
-        paymentStatus: 'UNPAID' as const,
-        paymentProof: undefined,
-      })),
-      transactions: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    setRoom(uniqueRoom);
-    if (uniqueRoom.participants.length > 0) {
-      setCurrentUserId(uniqueRoom.participants[0].id);
-    }
-    setActiveTab('CLAIM');
-
-    // Update URL to ?r=<uniqueRoom.id>
-    const newUrl = `${window.location.pathname}?r=${uniqueRoom.id}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
-
-    // Sync clean room to Supabase PostgreSQL
-    saveNewRoomToDb(uniqueRoom).catch(() => {});
+  const handleNewBill = () => {
+    setRoom(null);
+    setCurrentUserId('');
+    localStorage.removeItem('ipin_saved_room');
+    const cleanUrl = window.location.pathname;
+    window.history.pushState({}, '', cleanUrl);
   };
 
   const handleCreateRoom = async (roomData: Partial<Room>) => {
@@ -159,31 +134,40 @@ export function App() {
         updatedClaimers = isClaimed
           ? currentClaimers.filter((id) => id !== participantId)
           : [...currentClaimers, participantId];
-        return { ...item, claimedBy: updatedClaimers };
+        return {
+          ...item,
+          claimedBy: updatedClaimers,
+        };
       }
       return item;
     });
 
-    setRoom({ ...room, items: updatedItems });
+    setRoom({
+      ...room,
+      items: updatedItems,
+    });
 
-    // Sync to Supabase in background
+    // Real-time DB update
     updateItemClaimInDb(itemId, updatedClaimers).catch(() => {});
   };
 
-  const handleAddParticipant = (name: string) => {
-    if (!room) return;
+  const handleAddParticipant = async (name: string) => {
+    if (!room || !name.trim()) return;
+
     const colors = [
-      'from-blue-600 to-indigo-700',
-      'from-emerald-600 to-teal-700',
+      'from-blue-500 to-indigo-600',
+      'from-emerald-500 to-teal-600',
       'from-amber-500 to-orange-600',
-      'from-sky-500 to-blue-600',
-      'from-purple-600 to-indigo-700',
+      'from-rose-500 to-pink-600',
+      'from-purple-500 to-violet-600',
+      'from-cyan-500 to-blue-600',
     ];
-    const newId = `p-${Date.now()}`;
+    const randomColor = colors[room.participants.length % colors.length];
+
     const newParticipant: Participant = {
-      id: newId,
-      name,
-      avatarColor: colors[room.participants.length % colors.length],
+      id: `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+      name: name.trim(),
+      avatarColor: randomColor,
       paymentStatus: 'UNPAID',
     };
 
@@ -191,75 +175,78 @@ export function App() {
       ...room,
       participants: [...room.participants, newParticipant],
     });
-    setCurrentUserId(newId);
+    setCurrentUserId(newParticipant.id);
 
-    // Sync to Supabase
-    addParticipantToDb(room.id, newParticipant).catch(() => {});
+    // Real-time DB update
+    await addParticipantToDb(room.id, newParticipant);
   };
 
-  const handleAddCustomItem = (newItem: Partial<LineItem>) => {
+  const handleAddCustomItem = async (itemData: Partial<LineItem>) => {
     if (!room) return;
-    const fullItem: LineItem = {
-      id: `item-${Date.now()}`,
-      rawName: newItem.rawName || 'Custom Item',
-      cleanName: newItem.cleanName || 'Custom Item',
-      quantity: newItem.quantity || 1,
-      unitPrice: newItem.unitPrice || 0,
-      totalPrice: newItem.totalPrice || 0,
-      claimedBy: newItem.claimedBy || [currentUserId],
+    const newItem: LineItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      rawName: itemData.rawName || 'Item',
+      cleanName: itemData.cleanName || 'Item',
+      quantity: itemData.quantity || 1,
+      unitPrice: itemData.unitPrice || 0,
+      totalPrice: itemData.totalPrice || 0,
+      claimedBy: itemData.claimedBy || [currentUserId || room.participants[0]?.id || 'host'],
     };
 
-    const updatedItems = [...room.items, fullItem];
-    const newSubtotal = updatedItems.reduce((acc, it) => acc + it.totalPrice, 0);
-    const tax = Math.round((newSubtotal * 0.08875) * 100) / 100;
-    const serviceFee = Math.round((newSubtotal * 0.18) * 100) / 100;
-    const grandTotal = Math.round((newSubtotal + tax + serviceFee) * 100) / 100;
+    const newItems = [...room.items, newItem];
+    const newSubtotal = newItems.reduce((acc, it) => acc + it.totalPrice, 0);
+    const tax = Math.round(newSubtotal * 0.08875 * 100) / 100;
+    const serviceFee = Math.round(newSubtotal * 0.18 * 100) / 100;
+    const isZeroDecimal = room.currency === 'JPY';
+    const newGrandTotal = isZeroDecimal 
+      ? Math.round(newSubtotal + tax + serviceFee) 
+      : Math.round((newSubtotal + tax + serviceFee) * 100) / 100;
 
-    const newTotals = { subtotal: newSubtotal, tax, serviceFee, grandTotal };
-
-    setRoom({
+    const updatedRoom: Room = {
       ...room,
-      items: updatedItems,
-      ...newTotals,
-    });
+      items: newItems,
+      subtotal: newSubtotal,
+      tax: isZeroDecimal ? Math.round(tax) : tax,
+      serviceFee: isZeroDecimal ? Math.round(serviceFee) : serviceFee,
+      grandTotal: newGrandTotal,
+    };
 
-    // Sync to Supabase
-    addCustomItemToDb(room.id, fullItem, newTotals).catch(() => {});
+    setRoom(updatedRoom);
+
+    // Real-time DB updates
+    await addCustomItemToDb(room.id, newItem, {
+      subtotal: newSubtotal,
+      tax: isZeroDecimal ? Math.round(tax) : tax,
+      serviceFee: isZeroDecimal ? Math.round(serviceFee) : serviceFee,
+      grandTotal: newGrandTotal,
+    });
   };
 
-  // Transaction Recording Engine (1-Tap or ELA Forensic Upload)
-  const handleRecordTransaction = (newTx: Transaction) => {
+  const handleRecordTransaction = async (tx: Transaction) => {
     if (!room) return;
-    const updatedTransactions = [newTx, ...(room.transactions || [])];
 
-    let participantUpdate: { participantId: string; status: string; proof?: any } | undefined;
+    let newStatus: Participant['paymentStatus'] = 'VERIFIED';
+    if (tx.status === 'SUSPICIOUS_EDIT') newStatus = 'SUSPICIOUS_EDIT';
+    if (tx.status === 'FLAGGED_MISMATCH') newStatus = 'PARTIAL_OR_MISMATCH';
 
-    // Update participant payment status
     const updatedParticipants = room.participants.map((p) => {
-      if (p.id === newTx.senderId) {
-        const nextStatus = newTx.status === 'COMPLETED' ? ('VERIFIED' as const) : ('PARTIAL_OR_MISMATCH' as const);
-        const proof = newTx.proofUrl
-          ? {
-              imageUrl: newTx.proofUrl,
-              uploadedAt: new Date().toISOString(),
-              forensics: newTx.forensics,
-            }
-          : p.paymentProof;
-
-        participantUpdate = {
-          participantId: p.id,
-          status: nextStatus,
-          proof,
-        };
-
+      if (p.id === tx.senderId) {
         return {
           ...p,
-          paymentStatus: nextStatus,
-          paymentProof: proof,
+          paymentStatus: newStatus,
+          paymentProof: tx.proofUrl
+            ? {
+                imageUrl: tx.proofUrl,
+                uploadedAt: new Date().toISOString(),
+                forensics: tx.forensics,
+              }
+            : undefined,
         };
       }
       return p;
     });
+
+    const updatedTransactions = [tx, ...(room.transactions || [])];
 
     setRoom({
       ...room,
@@ -267,8 +254,15 @@ export function App() {
       transactions: updatedTransactions,
     });
 
-    // Sync to Supabase
-    recordTransactionToDb(room.id, newTx, participantUpdate).catch(() => {});
+    // Real-time DB sync
+    await recordTransactionToDb(room.id, tx, {
+      participantId: tx.senderId,
+      status: newStatus,
+      proof: tx.proofUrl ? { imageUrl: tx.proofUrl, forensics: tx.forensics } : undefined,
+    });
+
+    // Automatically trigger official receipt slip modal
+    setSelectedTxForReceipt(tx);
   };
 
   const handleOpenSettleModal = (participant: Participant) => {
@@ -277,59 +271,54 @@ export function App() {
   };
 
   const handleShare = () => {
-    // Ensure URL has ?r=<roomId>
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = room?.id ? `${baseUrl}?r=${room.id}` : window.location.href;
-    const text = `Hey! Here is our bill split on IPIN for "${room?.title}": ${shareUrl}\nTap your name to claim your items & settle up! 🧾`;
-    navigator.clipboard.writeText(text);
-    setHasShareCopied(true);
-    setTimeout(() => setHasShareCopied(false), 2500);
+    if (navigator.share && room) {
+      navigator
+        .share({
+          title: `Split bill: ${room.title}`,
+          text: `Claim your items and settle up on IPIN:`,
+          url: window.location.href,
+        })
+        .catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      setHasShareCopied(true);
+      setTimeout(() => setHasShareCopied(false), 2000);
+    }
   };
 
-  const currentUser =
-    room?.participants.find((p) => p.id === currentUserId) ||
-    room?.participants[0] || {
-      id: 'guest',
-      name: 'Guest',
-      avatarColor: 'from-slate-600 to-slate-700',
-      paymentStatus: 'UNPAID',
-    };
-
+  // Math Engine Calculation
   const splitResult = room ? calculateProportionalSplit(room) : null;
+  const currentUser = room?.participants.find((p) => p.id === currentUserId) || room?.participants[0];
   const unsettledParticipantsCount = room?.participants.filter(
-    (p) => (splitResult?.participantBreakdowns[p.id]?.amountRemaining || 0) > 0
+    (p) => p.paymentStatus !== 'VERIFIED'
   ).length || 0;
 
   return (
-    <div className="min-h-screen bg-slate-900 sm:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 selection:bg-blue-600 selection:text-white">
-      {/* Global Navigation Bar */}
+    <div className="min-h-screen bg-slate-900 flex flex-col font-sans antialiased text-slate-100">
+      {/* Top Universal Navbar */}
       <Navbar
-        onNewBill={() => {
-          try { localStorage.removeItem('ipin_saved_room'); } catch {}
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.pushState({}, '', cleanUrl);
-          setRoom(null);
-        }}
-        onTryDemo={(currency) => loadSampleRoom(currency || 'USD')}
+        onNewBill={handleNewBill}
         isInRoom={!!room}
         roomTitle={room?.title}
-        currentCurrency={room?.currency}
       />
 
-      {/* Main Responsive Body Container */}
-      <main className="flex-1 flex flex-col items-center justify-start sm:py-4 sm:px-2">
+      {/* Share Toast Notification */}
+      {hasShareCopied && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xl flex items-center gap-1.5 animate-bounce">
+          <span>✓ Room link copied to clipboard! Share with friends.</span>
+        </div>
+      )}
+
+      {/* Main Responsive Content */}
+      <main className="flex-1 flex flex-col w-full">
         {!room ? (
-          <div className="flex-1 w-full max-w-4xl mx-auto p-4">
-            <LandingHero
-              onLoadSample={(currency) => loadSampleRoom(currency)}
-              onCreateRoom={handleCreateRoom}
-            />
-          </div>
-        ) : splitResult ? (
-          /* Mobile App Viewport: edge-to-edge on phones, centered clean canvas on desktop */
-          <div className="w-full sm:max-w-md bg-white sm:rounded-[36px] shadow-2xl flex flex-col min-h-screen sm:min-h-[820px] sm:max-h-[880px] overflow-hidden border border-slate-800/40 relative">
+          <LandingHero
+            onCreateRoom={handleCreateRoom}
+          />
+        ) : splitResult && currentUser ? (
+          <div className="flex-1 flex flex-col max-w-md mx-auto w-full bg-white text-slate-900 shadow-2xl relative min-h-[calc(100vh-3.5rem)]">
             
-            {/* Top Navy Header & Recent Contacts */}
+            {/* Room Header Component (Total Bill, Participants, Host Info) */}
             <RoomHeader
               room={room}
               splitResult={splitResult}
@@ -341,8 +330,8 @@ export function App() {
               onOpenAddItem={() => setActiveTab('CLAIM')}
             />
 
-            {/* Content Tabs (Claim / Ledger / Summary) */}
-            <div className="flex-1 bg-white px-4 pt-3 overflow-y-auto flex flex-col scrollbar-none">
+            {/* Active Tab View */}
+            <div className="flex-1 px-4 sm:px-6 pt-4 pb-24">
               {activeTab === 'CLAIM' && (
                 <ClaimItemsTab
                   room={room}

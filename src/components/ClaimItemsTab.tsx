@@ -97,7 +97,31 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
 
       {/* Item List (Template 3 "Transactions" list style) */}
       <div className="space-y-2 pt-1">
-        {filteredItems.map((item) => {
+        {room.items.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center space-y-3">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+              <Utensils className="h-5 w-5 stroke-[1.8]" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-semibold text-slate-800">No Items Added Yet</h4>
+              <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                Add what you and your friends ordered to start splitting accurately.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-semibold text-white shadow-blue-btn transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add First Item</span>
+            </button>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center text-xs text-slate-500">
+            No items matching this filter.
+          </div>
+        ) : (
+          filteredItems.map((item) => {
           const claimers = item.claimedBy || [];
           const isClaimedByMe = claimers.includes(currentUser.id);
           const claimCount = claimers.length;
@@ -170,7 +194,7 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
 
       {/* Add Custom Item Modal */}
