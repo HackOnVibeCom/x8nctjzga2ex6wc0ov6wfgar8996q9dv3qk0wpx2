@@ -392,6 +392,41 @@ export async function recordTransactionToDb(
 }
 
 /**
+ * Updates the Stellar Vault state in the Supabase PostgreSQL database
+ */
+export async function updateRoomStellarVaultInDb(
+  roomId: string, 
+  stellarVault: any
+): Promise<boolean> {
+  try {
+    const { data: roomData, error: fetchErr } = await supabase
+      .from('rooms')
+      .select('organizer')
+      .eq('id', roomId)
+      .single();
+
+    if (fetchErr || !roomData) throw fetchErr || new Error('Room not found');
+
+    const updatedOrganizer = {
+      ...roomData.organizer,
+      stellarVault,
+    };
+
+    const { error: updateErr } = await supabase
+      .from('rooms')
+      .update({ organizer: updatedOrganizer })
+      .eq('id', roomId);
+
+    if (updateErr) throw updateErr;
+    console.log(`[Supabase] Room ${roomId} Stellar Vault updated in PostgreSQL:`, stellarVault.offRampStatus);
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Failed to update stellar vault in db:', err);
+    return false;
+  }
+}
+
+/**
  * Subscribes to live multiplayer updates via Supabase Realtime Channels
  */
 export function subscribeToRoom(roomId: string, onUpdate: () => void) {

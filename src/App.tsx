@@ -21,6 +21,7 @@ import {
   addParticipantToDb, 
   addCustomItemToDb, 
   recordTransactionToDb,
+  updateRoomStellarVaultInDb,
   subscribeToRoom 
 } from './services/supabase';
 
@@ -384,6 +385,9 @@ export function App() {
 
     setRoom(updatedRoom);
     await recordTransactionToDb(room.id, offRampTx);
+    if (updatedVault) {
+      await updateRoomStellarVaultInDb(room.id, updatedVault);
+    }
     setSelectedTxForReceipt(offRampTx);
   };
 
