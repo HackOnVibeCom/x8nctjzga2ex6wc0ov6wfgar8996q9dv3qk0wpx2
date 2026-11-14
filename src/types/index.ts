@@ -47,6 +47,8 @@ export interface Participant {
   isOrganizer?: boolean;
   paymentStatus: PaymentVerificationStatus;
   paymentProof?: PaymentProof;
+  phone?: string;
+  handle?: string;
 }
 
 export interface OrganizerPayoutDetails {

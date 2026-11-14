@@ -8,7 +8,8 @@ import {
   ArrowDownLeft,
   Sparkles,
   Zap,
-  Users
+  Users,
+  ArrowLeft
 } from 'lucide-react';
 import { Room, SplitCalculationResult, Participant, Transaction } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -20,6 +21,7 @@ interface LiveLedgerTabProps {
   onOpenSettleModal: (participant: Participant) => void;
   onInspectForensics: (participant: Participant) => void;
   onViewTransactionReceipt: (tx: Transaction) => void;
+  onBackToHome?: () => void;
 }
 
 export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
@@ -29,6 +31,7 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
   onOpenSettleModal,
   onInspectForensics,
   onViewTransactionReceipt,
+  onBackToHome,
 }) => {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
@@ -41,6 +44,25 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
 
   return (
     <div className="space-y-4 pb-28 text-[#0B2B16] font-sans">
+      
+      {/* Subpage Header with Back to Home */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        {onBackToHome ? (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#0B2B16] transition-colors cursor-pointer py-1 px-2 rounded-xl hover:bg-slate-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Home</span>
+          </button>
+        ) : (
+          <div />
+        )}
+        <div className="flex items-center gap-1.5 bg-[#0B2B16] text-[#B4F32D] px-2.5 py-1 rounded-full text-[10px] font-bold">
+          <Users className="h-3 w-3" />
+          <span>Live Ledger & Settlements</span>
+        </div>
+      </div>
       
       {/* Real-time Collection Progress Bar (Lime Green Accent) */}
       <div className="rounded-3xl bg-[#F8FAF6] border border-[#DDF3BA] p-4 space-y-2.5 shadow-soft">

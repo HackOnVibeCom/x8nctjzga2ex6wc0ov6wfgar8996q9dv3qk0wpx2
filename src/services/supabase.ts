@@ -54,14 +54,19 @@ export async function fetchRoomFromDb(roomId: string): Promise<Room | null> {
       claimedBy: it.claimed_by || [],
     }));
 
-    const participants: Participant[] = (participantsData || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      avatarColor: p.avatar_color,
-      isOrganizer: p.is_organizer,
-      paymentStatus: p.payment_status,
-      paymentProof: p.payment_proof || undefined,
-    }));
+    const participants: Participant[] = (participantsData || []).map((p) => {
+      const metadata = (p.payment_proof as any)?.userMetadata;
+      return {
+        id: p.id,
+        name: p.name,
+        avatarColor: p.avatar_color,
+        isOrganizer: p.is_organizer,
+        paymentStatus: p.payment_status,
+        paymentProof: p.payment_proof || undefined,
+        phone: metadata?.phone,
+        handle: metadata?.handle,
+      };
+    });
 
     const transactions: Transaction[] = (txData || []).map((tx) => ({
       id: tx.id,
@@ -213,6 +218,15 @@ export async function updateItemClaimInDb(itemId: string, claimedBy: string[]): 
  */
 export async function addParticipantToDb(roomId: string, participant: Participant): Promise<boolean> {
   try {
+    const existingProof = (participant.paymentProof as any) || {};
+    const updatedProof = {
+      ...existingProof,
+      userMetadata: {
+        phone: participant.phone || '',
+        handle: participant.handle || '',
+      },
+    };
+
     const { error } = await supabase.from('participants').insert({
       id: participant.id,
       room_id: roomId,
@@ -220,7 +234,7 @@ export async function addParticipantToDb(roomId: string, participant: Participan
       avatar_color: participant.avatarColor,
       is_organizer: !!participant.isOrganizer,
       payment_status: participant.paymentStatus,
-      payment_proof: participant.paymentProof || null,
+      payment_proof: updatedProof,
     });
 
     if (error) throw error;
@@ -228,6 +242,55 @@ export async function addParticipantToDb(roomId: string, participant: Participan
   } catch (err) {
     console.error('[Supabase] Failed to add participant:', err);
     return false;
+  }
+}
+
+export interface RegisteredUser {
+  id: string;
+  name: string;
+  phone?: string;
+  handle?: string;
+  avatarColor: string;
+}
+
+/**
+ * Searches the Supabase participant directory for existing registered friends
+ */
+export async function searchRegisteredUsers(query: string): Promise<RegisteredUser[]> {
+  try {
+    const cleanQuery = query.trim().replace(/^@/, '');
+    if (!cleanQuery) return [];
+
+    const { data, error } = await supabase
+      .from('participants')
+      .select('id, name, avatar_color, payment_proof')
+      .ilike('name', `%${cleanQuery}%`)
+      .limit(15);
+
+    if (error || !data) return [];
+
+    const seen = new Set<string>();
+    const users: RegisteredUser[] = [];
+
+    for (const row of data) {
+      const norm = row.name.toLowerCase().trim();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        const metadata = (row.payment_proof as any)?.userMetadata;
+        users.push({
+          id: row.id,
+          name: row.name,
+          avatarColor: row.avatar_color || 'from-emerald-500 to-teal-600',
+          phone: metadata?.phone || undefined,
+          handle: metadata?.handle || undefined,
+        });
+      }
+    }
+
+    return users;
+  } catch (err) {
+    console.error('[Supabase] searchRegisteredUsers error:', err);
+    return [];
   }
 }
 

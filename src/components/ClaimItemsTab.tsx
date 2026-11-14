@@ -5,7 +5,8 @@ import {
   AlertCircle,
   Utensils,
   Receipt,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { Room, LineItem, Participant } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -15,6 +16,7 @@ interface ClaimItemsTabProps {
   currentUser: Participant;
   onToggleClaim: (itemId: string, participantId: string) => void;
   onAddItem: (item: Partial<LineItem>) => void;
+  onBackToHome?: () => void;
 }
 
 export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
@@ -22,6 +24,7 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
   currentUser,
   onToggleClaim,
   onAddItem,
+  onBackToHome,
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'MINE' | 'UNCLAIMED'>('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -54,6 +57,31 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
   return (
     <div className="space-y-3 pb-28 text-[#0B2B16] font-sans">
       
+      {/* Subpage Header with Back to Home & Add Item */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        {onBackToHome ? (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#0B2B16] transition-colors cursor-pointer py-1 px-2 rounded-xl hover:bg-slate-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Home</span>
+          </button>
+        ) : (
+          <div />
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-extrabold text-[#0B2B16]">Claim Items</span>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="rounded-full bg-[#0B2B16] hover:bg-[#154625] text-[#B4F32D] px-3 py-1 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-xs"
+          >
+            <Plus className="h-3 w-3 stroke-[2.5]" />
+            <span>Add Item</span>
+          </button>
+        </div>
+      </div>
+
       {/* Category Filter Pills (Modeled after Screen 2) */}
       <div className="flex items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">

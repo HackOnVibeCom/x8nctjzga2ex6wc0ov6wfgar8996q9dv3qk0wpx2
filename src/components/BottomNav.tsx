@@ -1,37 +1,54 @@
 import React from 'react';
 import { 
+  Home,
   Receipt, 
   Users, 
   Scan, 
   FileText 
 } from 'lucide-react';
 
+export type NavPage = 'HOME' | 'CLAIM' | 'LEDGER' | 'VERIFY' | 'SUMMARY';
+
 interface BottomNavProps {
-  activeTab: 'CLAIM' | 'LEDGER' | 'SUMMARY';
-  onSelectTab: (tab: 'CLAIM' | 'LEDGER' | 'SUMMARY') => void;
-  onCenterAction: () => void;
+  activePage: NavPage;
+  onSelectPage: (page: NavPage) => void;
   itemCount: number;
   unsettledCount: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
-  activeTab,
-  onSelectTab,
-  onCenterAction,
+  activePage,
+  onSelectPage,
   itemCount,
   unsettledCount,
 }) => {
   return (
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
       <nav className="pointer-events-auto w-full max-w-sm rounded-full bg-[#0B2B16] text-white px-2 py-2 border border-white/10 shadow-floating">
-        <div className="grid grid-cols-4 items-center gap-1">
+        <div className="grid grid-cols-5 items-center gap-1">
           
-          {/* 1. Claim Items */}
+          {/* 1. Home Dashboard */}
           <button
             type="button"
-            onClick={() => onSelectTab('CLAIM')}
+            onClick={() => onSelectPage('HOME')}
             className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
-              activeTab === 'CLAIM'
+              activePage === 'HOME'
+                ? 'text-[#B4F32D] font-bold bg-white/10'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <div className="relative">
+              <Home className="h-5 w-5 stroke-[2]" />
+            </div>
+            <span className="text-[10px] mt-1 tracking-tight leading-none">Home</span>
+          </button>
+
+          {/* 2. Claim Items */}
+          <button
+            type="button"
+            onClick={() => onSelectPage('CLAIM')}
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+              activePage === 'CLAIM'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
             }`}
@@ -47,12 +64,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Claim</span>
           </button>
 
-          {/* 2. Ledger & Balances */}
+          {/* 3. Ledger & Balances */}
           <button
             type="button"
-            onClick={() => onSelectTab('LEDGER')}
+            onClick={() => onSelectPage('LEDGER')}
             className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
-              activeTab === 'LEDGER'
+              activePage === 'LEDGER'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
             }`}
@@ -68,12 +85,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Ledger</span>
           </button>
 
-          {/* 3. Verify AI (Same uniform styling and color as all buttons) */}
+          {/* 4. Verify AI (Same uniform styling, size and color) */}
           <button
             type="button"
-            onClick={onCenterAction}
+            onClick={() => onSelectPage('VERIFY')}
             title="Scan & Verify Payment Screenshot"
-            className="w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer text-slate-400 hover:text-white"
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+              activePage === 'VERIFY'
+                ? 'text-[#B4F32D] font-bold bg-white/10'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
             <div className="relative">
               <Scan className="h-5 w-5 stroke-[2]" />
@@ -81,12 +102,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Verify AI</span>
           </button>
 
-          {/* 4. Summary & Export */}
+          {/* 5. Summary & Export */}
           <button
             type="button"
-            onClick={() => onSelectTab('SUMMARY')}
+            onClick={() => onSelectPage('SUMMARY')}
             className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
-              activeTab === 'SUMMARY'
+              activePage === 'SUMMARY'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
             }`}

@@ -6,7 +6,8 @@ import {
   MessageCircle, 
   CheckCircle2, 
   AlertTriangle, 
-  Clock 
+  Clock,
+  ArrowLeft 
 } from 'lucide-react';
 import { Room, SplitCalculationResult } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -15,11 +16,14 @@ interface SummaryCardTabProps {
   room: Room;
   splitResult: SplitCalculationResult;
   onShare: () => void;
+  onBackToHome?: () => void;
 }
 
 export const SummaryCardTab: React.FC<SummaryCardTabProps> = ({
   room,
   splitResult,
+  onShare,
+  onBackToHome,
 }) => {
   const [copiedSummary, setCopiedSummary] = useState(false);
 
@@ -72,6 +76,25 @@ export const SummaryCardTab: React.FC<SummaryCardTabProps> = ({
   return (
     <div className="space-y-4 pb-28 text-[#0B2B16] font-sans">
       
+      {/* Subpage Header with Back to Home */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        {onBackToHome ? (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#0B2B16] transition-colors cursor-pointer py-1 px-2 rounded-xl hover:bg-slate-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Home</span>
+          </button>
+        ) : (
+          <div />
+        )}
+        <div className="flex items-center gap-1.5 bg-[#0B2B16] text-[#B4F32D] px-2.5 py-1 rounded-full text-[10px] font-bold">
+          <Receipt className="h-3 w-3" />
+          <span>Final Bill Summary</span>
+        </div>
+      </div>
+
       {/* Top Action Pills (Lime + Forest Palette) */}
       <div className="flex items-center gap-2">
         <button

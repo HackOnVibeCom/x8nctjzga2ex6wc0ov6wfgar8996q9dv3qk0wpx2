@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Room, Participant, LineItem, Transaction } from './types';
 import { calculateProportionalSplit } from './utils/splitMath';
 import { LandingHero } from './components/LandingHero';
-import { RoomHeader } from './components/RoomHeader';
+import { HomeDashboardView } from './components/HomeDashboardView';
 import { ClaimItemsTab } from './components/ClaimItemsTab';
 import { LiveLedgerTab } from './components/LiveLedgerTab';
+import { VerifyAITab } from './components/VerifyAITab';
 import { SummaryCardTab } from './components/SummaryCardTab';
 import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
-import { BottomNav } from './components/BottomNav';
+import { BottomNav, NavPage } from './components/BottomNav';
+import { AddFriendModal } from './components/AddFriendModal';
 import { Users, X } from 'lucide-react';
 import { 
   fetchRoomFromDb, 
@@ -19,6 +21,16 @@ import {
   recordTransactionToDb,
   subscribeToRoom 
 } from './services/supabase';
+
+// Helper to resolve route page from pathname
+const getPageFromPath = (): NavPage => {
+  const p = window.location.pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+  if (p === 'claim') return 'CLAIM';
+  if (p === 'ledger') return 'LEDGER';
+  if (p === 'verify') return 'VERIFY';
+  if (p === 'summary') return 'SUMMARY';
+  return 'HOME';
+};
 
 export function App() {
   const [room, setRoom] = useState<Room | null>(() => {
@@ -45,7 +57,7 @@ export function App() {
   });
 
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'CLAIM' | 'LEDGER' | 'SUMMARY'>('CLAIM');
+  const [activePage, setActivePage] = useState<NavPage>(() => getPageFromPath());
   const [hasShareCopied, setHasShareCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -54,10 +66,14 @@ export function App() {
   const [visitorName, setVisitorName] = useState(() => {
     return localStorage.getItem('ipin_user_name') || '';
   });
+  const [visitorPhone, setVisitorPhone] = useState(() => {
+    return localStorage.getItem('ipin_user_phone') || '';
+  });
 
   // Modal states
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+  const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
 
   // Sync state to localStorage as fallback
@@ -68,6 +84,24 @@ export function App() {
       } catch {}
     }
   }, [room]);
+
+  // Sync route on popstate (browser back/forward button)
+  useEffect(() => {
+    const handlePopState = () => {
+      setActivePage(getPageFromPath());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Safe navigation that updates the browser URL to /page?r=...
+  const handleNavigate = (page: NavPage) => {
+    setActivePage(page);
+    const path = page === 'HOME' ? '/' : `/${page.toLowerCase()}`;
+    const roomId = room?.id || new URLSearchParams(window.location.search).get('r');
+    const query = roomId ? `?r=${roomId}` : '';
+    window.history.pushState({ page }, '', `${path}${query}`);
+  };
 
   // Refresh room from Supabase
   const refreshRoom = useCallback(async (roomId: string) => {
@@ -123,8 +157,8 @@ export function App() {
     setRoom(null);
     setCurrentUserId('');
     localStorage.removeItem('ipin_saved_room');
-    const cleanUrl = window.location.pathname;
-    window.history.pushState({}, '', cleanUrl);
+    window.history.pushState({}, '', '/');
+    setActivePage('HOME');
   };
 
   const handleCreateRoom = async (roomData: Partial<Room>) => {
@@ -136,14 +170,14 @@ export function App() {
       localStorage.setItem(`ipin_user_id_${fullRoom.id}`, host.id);
       localStorage.setItem('ipin_user_name', host.name);
     }
-    setActiveTab('CLAIM');
 
     // Save to real Supabase PostgreSQL
     await saveNewRoomToDb(fullRoom);
 
-    // Update URL to ?r=<roomId>
-    const newUrl = `${window.location.pathname}?r=${fullRoom.id}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
+    // Update URL to /?r=<roomId>
+    const newUrl = `/?r=${fullRoom.id}`;
+    window.history.pushState({ page: 'HOME' }, '', newUrl);
+    setActivePage('HOME');
   };
 
   const handleToggleClaim = (itemId: string, participantId: string) => {
@@ -174,7 +208,7 @@ export function App() {
     updateItemClaimInDb(itemId, updatedClaimers).catch(() => {});
   };
 
-  const handleAddParticipant = async (name: string) => {
+  const handleAddParticipant = async (name: string, phoneOrHandle?: string) => {
     if (!room || !name.trim()) return;
 
     const newParticipant: Participant = {
@@ -182,6 +216,8 @@ export function App() {
       name: name.trim(),
       avatarColor: 'from-emerald-500 to-teal-600',
       paymentStatus: 'UNPAID',
+      phone: phoneOrHandle?.startsWith('@') ? undefined : phoneOrHandle,
+      handle: phoneOrHandle?.startsWith('@') ? phoneOrHandle.replace(/^@/, '') : undefined,
     };
 
     const updatedParticipants = [...room.participants, newParticipant];
@@ -189,9 +225,6 @@ export function App() {
       ...room,
       participants: updatedParticipants,
     });
-    setCurrentUserId(newParticipant.id);
-    localStorage.setItem(`ipin_user_id_${room.id}`, newParticipant.id);
-    localStorage.setItem('ipin_user_name', newParticipant.name);
 
     // Real-time DB update
     await addParticipantToDb(room.id, newParticipant);
@@ -201,19 +234,38 @@ export function App() {
     e.preventDefault();
     if (!visitorName.trim() || !room) return;
 
+    // Save identity locally for zero-friction return
+    localStorage.setItem('ipin_user_name', visitorName.trim());
+    if (visitorPhone.trim()) {
+      localStorage.setItem('ipin_user_phone', visitorPhone.trim());
+    }
+
     // Check if a participant with this name already exists in the room
     const existing = room.participants.find(
       (p) => p.name.trim().toLowerCase() === visitorName.trim().toLowerCase()
     );
 
     if (existing) {
-      // Connect to their existing profile!
       setCurrentUserId(existing.id);
       localStorage.setItem(`ipin_user_id_${room.id}`, existing.id);
-      localStorage.setItem('ipin_user_name', existing.name);
     } else {
-      // Create new dynamic participant!
-      await handleAddParticipant(visitorName.trim());
+      const newParticipant: Participant = {
+        id: `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        name: visitorName.trim(),
+        avatarColor: 'from-emerald-500 to-teal-600',
+        paymentStatus: 'UNPAID',
+        phone: visitorPhone.trim() || undefined,
+      };
+
+      const updatedParticipants = [...room.participants, newParticipant];
+      setRoom({
+        ...room,
+        participants: updatedParticipants,
+      });
+      setCurrentUserId(newParticipant.id);
+      localStorage.setItem(`ipin_user_id_${room.id}`, newParticipant.id);
+
+      await addParticipantToDb(room.id, newParticipant);
     }
 
     setShowVisitorJoinModal(false);
@@ -303,16 +355,17 @@ export function App() {
   };
 
   const handleShare = () => {
+    const fullUrl = `${window.location.origin}/?r=${room?.id || ''}`;
     if (navigator.share && room) {
       navigator
         .share({
           title: `Split bill: ${room.title}`,
           text: `Claim your items and settle up on IPIN:`,
-          url: window.location.href,
+          url: fullUrl,
         })
         .catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(fullUrl);
       setHasShareCopied(true);
       setTimeout(() => setHasShareCopied(false), 2000);
     }
@@ -335,46 +388,49 @@ export function App() {
         </div>
       )}
 
-      {/* Main Pure Mobile Container (Zero outer desktop headers) */}
+      {/* Main Pure Mobile Container (Zero desktop headers) */}
       <main className="w-full max-w-md min-h-screen bg-white relative flex flex-col shadow-2xl overflow-hidden">
         {!room ? (
           <LandingHero
             onCreateRoom={handleCreateRoom}
             onJoinRoomById={(roomId) => {
-              const newUrl = `${window.location.pathname}?r=${roomId}`;
-              window.history.pushState({ path: newUrl }, '', newUrl);
+              const newUrl = `/?r=${roomId}`;
+              window.history.pushState({ page: 'HOME' }, '', newUrl);
               refreshRoom(roomId);
             }}
           />
         ) : splitResult && currentUser ? (
           <div className="flex-1 flex flex-col w-full bg-white text-[#0B2B16] relative min-h-screen">
             
-            {/* Room Header Component with In-App New Split + 50+ User Roster */}
-            <RoomHeader
-              room={room}
-              splitResult={splitResult}
-              currentUser={currentUser}
-              onAddParticipant={handleAddParticipant}
-              onSwitchUser={(id) => setCurrentUserId(id)}
-              onShare={handleShare}
-              onOpenSettleUp={() => handleOpenSettleModal(currentUser)}
-              onOpenAddItem={() => setActiveTab('CLAIM')}
-              onOpenVerifyAI={() => handleOpenSettleModal(currentUser)}
-              onNewBill={handleNewBill}
-            />
+            {/* View Switching: Only HOME has the Total Bill Card + 4 Action Tiles */}
+            {activePage === 'HOME' && (
+              <HomeDashboardView
+                room={room}
+                splitResult={splitResult}
+                currentUser={currentUser}
+                onNavigate={handleNavigate}
+                onOpenAddFriend={() => setIsAddFriendModalOpen(true)}
+                onOpenSettleModal={handleOpenSettleModal}
+                onSwitchUser={(id) => setCurrentUserId(id)}
+                onShare={handleShare}
+                onNewBill={handleNewBill}
+              />
+            )}
 
-            {/* Active Tab View */}
-            <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
-              {activeTab === 'CLAIM' && (
+            {activePage === 'CLAIM' && (
+              <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
                 <ClaimItemsTab
                   room={room}
                   currentUser={currentUser}
                   onToggleClaim={handleToggleClaim}
                   onAddItem={handleAddCustomItem}
+                  onBackToHome={() => handleNavigate('HOME')}
                 />
-              )}
+              </div>
+            )}
 
-              {activeTab === 'LEDGER' && (
+            {activePage === 'LEDGER' && (
+              <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
                 <LiveLedgerTab
                   room={room}
                   splitResult={splitResult}
@@ -382,35 +438,57 @@ export function App() {
                   onOpenSettleModal={handleOpenSettleModal}
                   onInspectForensics={(p) => handleOpenSettleModal(p)}
                   onViewTransactionReceipt={(tx) => setSelectedTxForReceipt(tx)}
+                  onBackToHome={() => handleNavigate('HOME')}
                 />
-              )}
+              </div>
+            )}
 
-              {activeTab === 'SUMMARY' && (
+            {activePage === 'VERIFY' && (
+              <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
+                <VerifyAITab
+                  room={room}
+                  splitResult={splitResult}
+                  currentUser={currentUser}
+                  onBackToHome={() => handleNavigate('HOME')}
+                  onRecordTransaction={handleRecordTransaction}
+                  onViewTransactionReceipt={(tx) => setSelectedTxForReceipt(tx)}
+                />
+              </div>
+            )}
+
+            {activePage === 'SUMMARY' && (
+              <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
                 <SummaryCardTab
                   room={room}
                   splitResult={splitResult}
                   onShare={handleShare}
+                  onBackToHome={() => handleNavigate('HOME')}
                 />
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Floating Mobile Bottom Navigation Bar */}
+            {/* Floating Mobile Bottom Navigation Bar (5 equal items) */}
             <BottomNav
-              activeTab={activeTab}
-              onSelectTab={setActiveTab}
-              onCenterAction={() => {
-                if (currentUser) {
-                  handleOpenSettleModal(currentUser);
-                }
-              }}
+              activePage={activePage}
+              onSelectPage={handleNavigate}
               itemCount={room.items.length}
               unsettledCount={unsettledParticipantsCount}
+            />
+
+            {/* Real Friend Search Modal */}
+            <AddFriendModal
+              isOpen={isAddFriendModalOpen}
+              onClose={() => setIsAddFriendModalOpen(false)}
+              roomId={room.id}
+              roomTitle={room.title}
+              existingParticipants={room.participants}
+              onAddParticipant={handleAddParticipant}
             />
           </div>
         ) : null}
       </main>
 
-      {/* Dynamic Visitor Join Bottom Sheet (Supports 50+ users joining via link) */}
+      {/* Dynamic Visitor Join Bottom Sheet */}
       {showVisitorJoinModal && room && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 font-sans">
           <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom">
@@ -430,22 +508,37 @@ export function App() {
             </div>
 
             <p className="text-xs text-slate-500 mt-2 mb-4">
-              Enter your name to join this bill. You will be able to tap the items you ate and settle your share directly.
+              Enter your name to join this bill. No passwords or registration needed — just claim what you ate and settle!
             </p>
 
             <form onSubmit={handleVisitorJoinSubmit} className="space-y-3">
-              <input
-                type="text"
-                required
-                placeholder="What is your name? (e.g. David)"
-                value={visitorName}
-                onChange={(e) => setVisitorName(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
-                autoFocus
-              />
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Your Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="What is your name? (e.g. David)"
+                  value={visitorName}
+                  onChange={(e) => setVisitorName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Phone Number or @Handle (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 08012345678 or @david"
+                  value={visitorPhone}
+                  onChange={(e) => setVisitorPhone(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
+                />
+              </div>
+
               <button
                 type="submit"
-                className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-3.5 text-xs font-bold shadow-forest-btn transition-all cursor-pointer"
+                className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-3.5 text-xs font-bold shadow-forest-btn transition-all cursor-pointer mt-2"
               >
                 Join Bill Split
               </button>
