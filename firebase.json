@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "ipin",
     "public": "dist",
     "ignore": [
       "firebase.json",
@@ -14,4 +15,3 @@
     ]
   }
 }
-
