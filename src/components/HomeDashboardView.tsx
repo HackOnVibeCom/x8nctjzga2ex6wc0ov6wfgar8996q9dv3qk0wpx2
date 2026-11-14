@@ -540,8 +540,14 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
 
       {/* Payout Info Sheet */}
       {showPayoutModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 font-sans">
-          <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom">
+        <div 
+          onClick={() => setShowPayoutModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 font-sans"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-[#ECFDC5] text-[#0B2B16] flex items-center justify-center font-bold text-xs">
@@ -550,6 +556,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
                 <h3 className="text-base font-bold text-[#0B2B16]">Host Payout Information</h3>
               </div>
               <button
+                id="close-payout-modal-btn"
                 onClick={() => setShowPayoutModal(false)}
                 className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
               >
@@ -595,6 +602,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
         isOpen={showOffRampModal}
         onClose={() => setShowOffRampModal(false)}
         onOffRampSuccess={(res) => {
+          setShowOffRampModal(false);
           if (onOffRampSuccess) onOffRampSuccess(res);
         }}
       />

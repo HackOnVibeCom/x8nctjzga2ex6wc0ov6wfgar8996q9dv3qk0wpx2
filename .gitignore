@@ -9,4 +9,7 @@ dist-ssr
 *.tsbuildinfo
 .wrangler
 .firebase
+demo_recordings/
+*.webm
+*.mp4
 

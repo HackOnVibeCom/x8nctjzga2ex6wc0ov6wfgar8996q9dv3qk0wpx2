@@ -62,11 +62,18 @@ Status: ${isCompleted ? 'VERIFIED SETTLED' : 'FLAGGED FOR REVIEW'}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto font-sans">
-      <div className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-2xl relative my-6 text-[#0B2B16] border border-slate-100">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto font-sans"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-2xl relative my-6 text-[#0B2B16] border border-slate-100"
+      >
         
         {/* Close Button */}
         <button
+          id="close-receipt-modal-x-btn"
           onClick={onClose}
           className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
         >
@@ -173,6 +180,7 @@ Status: ${isCompleted ? 'VERIFIED SETTLED' : 'FLAGGED FOR REVIEW'}`;
           </button>
           
           <button
+            id="close-receipt-modal-done-btn"
             onClick={onClose}
             className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-3.5 text-xs font-bold shadow-forest-btn transition-colors cursor-pointer"
           >

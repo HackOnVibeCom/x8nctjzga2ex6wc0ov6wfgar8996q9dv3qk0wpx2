@@ -30,21 +30,27 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState(1);
+
+  const currencySymbol = room.currencySymbol || (room.currency === 'NGN' ? '₦' : room.currency === 'EUR' ? '€' : room.currency === 'GBP' ? '£' : room.currency === 'JPY' ? '¥' : '$');
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim() || !newItemPrice) return;
-    const price = parseFloat(newItemPrice) || 0;
+    const unitPrice = parseFloat(newItemPrice) || 0;
+    const qty = Math.max(1, newItemQuantity);
+    const totalPrice = unitPrice * qty;
     onAddItem({
       cleanName: newItemName.trim(),
       rawName: newItemName.trim(),
-      quantity: 1,
-      unitPrice: price,
-      totalPrice: price,
+      quantity: qty,
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
       claimedBy: [currentUser.id],
     });
     setNewItemName('');
     setNewItemPrice('');
+    setNewItemQuantity(1);
     setShowAddModal(false);
   };
 
@@ -236,16 +242,19 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl text-[#0B2B16]">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-[#0B2B16]">Add Bill Item</h3>
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#B4F32D] text-[#0B2B16] text-[11px] font-black">+</span>
+                <h3 className="text-sm font-bold text-[#0B2B16]">Add Bill Item to Room</h3>
+              </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center"
+                className="h-7 w-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Add any missed drink, dish, or fee to the split.
+            <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+              Ordered extra drinks or pepper soup mid-meal? Add it to this active split room so friends can claim it.
             </p>
             <form onSubmit={handleAddItem} className="space-y-3">
               <div>
@@ -253,7 +262,7 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Garlic Bread, Cocktails, Dessert"
+                  placeholder="e.g. Chapman Cocktail, Suya Platter, Extra Rice"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
@@ -261,20 +270,55 @@ export const ClaimItemsTab: React.FC<ClaimItemsTabProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-[#0B2B16]">
-                  Item Price ({room.currencySymbol})
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 15.50"
-                  value={newItemPrice}
-                  onChange={(e) => setNewItemPrice(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                {/* Quantity / Pieces Stepper */}
+                <div>
+                  <label className="text-xs font-semibold text-[#0B2B16]">Quantity / Pieces</label>
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-[#F8FAF6] px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                      className="h-7 w-7 rounded-xl bg-white text-slate-700 font-bold hover:bg-slate-100 flex items-center justify-center shadow-xs cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="text-xs font-bold text-[#0B2B16]">{newItemQuantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setNewItemQuantity(newItemQuantity + 1)}
+                      className="h-7 w-7 rounded-xl bg-white text-slate-700 font-bold hover:bg-slate-100 flex items-center justify-center shadow-xs cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Price per item */}
+                <div>
+                  <label className="text-xs font-semibold text-[#0B2B16]">
+                    Unit Price ({currencySymbol})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="e.g. 2500"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-2.5 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
+                  />
+                </div>
               </div>
+
+              {/* Total Calculation Badge */}
+              {newItemPrice && parseFloat(newItemPrice) > 0 && (
+                <div className="flex items-center justify-between rounded-xl bg-[#F2FCE2] px-3 py-2 text-xs font-bold text-[#0B2B16]">
+                  <span>Total for {newItemQuantity} item{newItemQuantity > 1 ? 's' : ''}:</span>
+                  <span className="text-sm font-black text-[#0B2B16]">
+                    {currencySymbol}{(parseFloat(newItemPrice) * newItemQuantity).toLocaleString()}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-2">
                 <button

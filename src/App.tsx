@@ -346,6 +346,10 @@ export function App() {
       proof: tx.proofUrl ? { imageUrl: tx.proofUrl, forensics: tx.forensics } : undefined,
     });
 
+    // Close settle modal so only the official receipt slip is shown
+    setIsSettleModalOpen(false);
+    setActiveModalUser(null);
+
     // Trigger official receipt slip modal
     setSelectedTxForReceipt(tx);
   };

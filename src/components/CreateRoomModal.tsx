@@ -123,6 +123,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const loadNaijaChowPreset = () => {
     setQuickTitle('Iya Said Alamala Hangout');
     setCurrency('NGN');
+    if (!organizerName) setOrganizerName('Ibrahim');
     setVendorName('Iya Said Alamala');
     setBankName('OPay Digital Services');
     setAccountNumber('9136447931');
@@ -138,6 +139,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const loadItalianDinnerPreset = () => {
     setQuickTitle('Bistro Italian Dinner');
     setCurrency('USD');
+    if (!organizerName) setOrganizerName('Alex');
     setVendorName('Bistro Cucina');
     setBankName('JPMorgan Chase (USD / ACH)');
     setAccountNumber('4019283746');
@@ -154,6 +156,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const loadIzakayaPreset = () => {
     setQuickTitle('Shinjuku Izakaya Night');
     setCurrency('JPY');
+    if (!organizerName) setOrganizerName('Kenji');
     setVendorName('Izakaya Shinjuku');
     setBankName('Direct Stellar Web3 Wallet (USDC)');
     setAccountNumber('GD3EP2FQ5EQQQYTFPRBODQ5UUVC35RCFCFZ3TFFGUVRHQBPBWJYZPEXZ');
