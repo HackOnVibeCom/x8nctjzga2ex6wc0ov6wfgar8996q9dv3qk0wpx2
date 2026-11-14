@@ -30,7 +30,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('CLAIM')}
-            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'CLAIM'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
@@ -51,7 +51,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('LEDGER')}
-            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'LEDGER'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
@@ -68,24 +68,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Ledger</span>
           </button>
 
-          {/* 3. Verify AI (Center highlighted action modeled after Screen 2 center ring) */}
+          {/* 3. Verify AI (Same uniform styling and color as all buttons) */}
           <button
             type="button"
             onClick={onCenterAction}
             title="Scan & Verify Payment Screenshot"
-            className="w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer text-slate-300 hover:text-white group"
+            className="w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer text-slate-400 hover:text-white"
           >
-            <div className="relative p-1 rounded-full border-2 border-[#B4F32D] group-hover:scale-105 transition-transform bg-[#051F10]">
-              <Scan className="h-4 w-4 stroke-[2.2] text-[#B4F32D]" />
+            <div className="relative">
+              <Scan className="h-5 w-5 stroke-[2]" />
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight leading-none font-semibold text-[#B4F32D]">Verify AI</span>
+            <span className="text-[10px] mt-1 tracking-tight leading-none">Verify AI</span>
           </button>
 
           {/* 4. Summary & Export */}
           <button
             type="button"
             onClick={() => onSelectTab('SUMMARY')}
-            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
               activeTab === 'SUMMARY'
                 ? 'text-[#B4F32D] font-bold bg-white/10'
                 : 'text-slate-400 hover:text-white'
