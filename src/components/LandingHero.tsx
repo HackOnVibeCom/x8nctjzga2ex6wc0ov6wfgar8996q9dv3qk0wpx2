@@ -2,36 +2,40 @@ import React, { useState } from 'react';
 import { 
   Sparkles, 
   ArrowRight, 
-  Users, 
-  Scan, 
-  ShieldCheck, 
   Receipt,
   Plus,
-  Globe,
   CreditCard,
-  DollarSign
+  Layers,
+  ShieldCheck,
+  X,
+  LogIn
 } from 'lucide-react';
 import { Currency, Room } from '../types';
 import { getCurrencySymbol } from '../utils/splitMath';
 
 interface LandingHeroProps {
   onCreateRoom: (roomData: Partial<Room>) => void;
+  onJoinRoomById?: (roomId: string) => void;
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({
   onCreateRoom,
+  onJoinRoomById,
 }) => {
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [showJoinSheet, setShowJoinSheet] = useState(false);
+  const [joinInput, setJoinInput] = useState('');
+  
+  // Room setup form state (Zero mock data - completely clean!)
   const [quickTitle, setQuickTitle] = useState('');
   const [currency, setCurrency] = useState<Currency>('USD');
   const [organizerName, setOrganizerName] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [rawItemsText, setRawItemsText] = useState('');
-  const [taxPercent, setTaxPercent] = useState('');
-  const [serviceFeePercent, setServiceFeePercent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -68,15 +72,12 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
     });
 
     const subtotal = parsedItems.reduce((acc, it) => acc + it.totalPrice, 0);
-    const tax = taxPercent ? Math.round(subtotal * (parseFloat(taxPercent) || 0)) / 100 : 0;
-    const serviceFee = serviceFeePercent ? Math.round(subtotal * (parseFloat(serviceFeePercent) || 0)) / 100 : 0;
-    const grandTotal = isZeroDecimal 
-      ? Math.round(subtotal + tax + serviceFee) 
-      : Math.round((subtotal + tax + serviceFee) * 100) / 100;
+    const grandTotal = isZeroDecimal ? Math.round(subtotal) : Math.round(subtotal * 100) / 100;
 
     const organizerId = `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const hostDisplayName = organizerName.trim() || 'Host';
 
+    // Completely dynamic: NO fake friends pre-added! ONLY the host exists.
     const newRoom: Partial<Room> = {
       id: `room-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`,
       title: quickTitle.trim() || 'New Bill Split',
@@ -93,8 +94,8 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
       },
       items: parsedItems,
       subtotal,
-      tax,
-      serviceFee,
+      tax: 0,
+      serviceFee: 0,
       deliveryFee: 0,
       discount: 0,
       grandTotal,
@@ -102,7 +103,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
         {
           id: organizerId,
           name: hostDisplayName,
-          avatarColor: 'from-blue-600 to-indigo-700',
+          avatarColor: 'from-emerald-600 to-green-700',
           isOrganizer: true,
           paymentStatus: 'UNPAID',
         },
@@ -114,210 +115,325 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
     onCreateRoom(newRoom);
   };
 
+  const handleJoinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinInput.trim()) return;
+
+    let targetId = joinInput.trim();
+    if (targetId.includes('?r=')) {
+      const match = targetId.match(/[?&]r=([^&]+)/);
+      if (match && match[1]) targetId = match[1];
+    } else if (targetId.includes('/')) {
+      const parts = targetId.split('/');
+      targetId = parts[parts.length - 1];
+    }
+
+    if (onJoinRoomById) {
+      onJoinRoomById(targetId);
+    } else {
+      window.location.search = `?r=${encodeURIComponent(targetId)}`;
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#060b24]">
-      {/* Top Deep Blue Section */}
-      <div className="px-5 pt-8 pb-8 text-white space-y-4 max-w-lg mx-auto w-full">
-        {/* Subtle pill tag */}
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-normal text-blue-200">
-          <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-          <span>Zero-CAC Universal Bill Splitter</span>
+    <div className="min-h-screen bg-[#B4F32D] text-[#0B2B16] flex flex-col justify-between max-w-md mx-auto relative overflow-hidden font-sans">
+      
+      {/* Top Header Branding (Modeled after Paymal Screen 1) */}
+      <div className="pt-8 px-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-2xl bg-[#0B2B16] text-[#B4F32D] flex items-center justify-center shadow-sm">
+            <Receipt className="h-5 w-5 stroke-[2.2]" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-[#0B2B16]">
+            Ipin
+          </span>
         </div>
 
-        {/* Headline */}
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight text-white">
-            Smart bill splitting for everyday outings.
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-            Create a live split link in seconds. Friends claim items in real time, math calculates proportional tax and tip, and anti-fraud forensics verifies payment proofs.
-          </p>
+        <div className="rounded-full bg-[#0B2B16]/10 px-3 py-1 text-[11px] font-semibold text-[#0B2B16]">
+          Multiplayer Split
         </div>
       </div>
 
-      {/* Bottom Clean White Form Sheet */}
-      <div className="flex-1 rounded-t-[32px] bg-white px-5 pt-6 pb-20 shadow-card text-slate-900">
-        <div className="max-w-lg mx-auto space-y-5">
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-blue-600" />
-                <span>Create New Split Room</span>
-              </h3>
-              <span className="text-[11px] text-slate-400">No sign-up required</span>
-            </div>
+      {/* 3D Floating Layered Cards Graphic (Modeled directly after Screen 1) */}
+      <div className="relative py-8 flex items-center justify-center overflow-hidden">
+        {/* Floating coins */}
+        <div className="absolute top-4 left-10 h-7 w-7 rounded-full bg-amber-400 border-2 border-amber-300 shadow-md flex items-center justify-center text-[10px] font-bold text-amber-900 animate-pulse">
+          $
+        </div>
+        <div className="absolute top-12 right-12 h-6 w-6 rounded-full bg-amber-400 border-2 border-amber-300 shadow-md flex items-center justify-center text-[9px] font-bold text-amber-900">
+          ¥
+        </div>
+        <div className="absolute bottom-6 left-12 h-6 w-6 rounded-full bg-amber-400 border-2 border-amber-300 shadow-md flex items-center justify-center text-[9px] font-bold text-amber-900">
+          €
+        </div>
+        <div className="absolute bottom-10 right-10 h-7 w-7 rounded-full bg-amber-400 border-2 border-amber-300 shadow-md flex items-center justify-center text-[10px] font-bold text-amber-900 animate-bounce">
+          ₦
+        </div>
 
-            {/* Bill Title */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-slate-600">
-                Bill / Event Title <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Friday Dinner, Groceries, Team Lunch"
-                value={quickTitle}
-                onChange={(e) => setQuickTitle(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
-              />
+        {/* Stacked 3D Credit Cards */}
+        <div className="relative w-64 h-52 flex items-center justify-center">
+          {/* Bottom Card (Deep Blue) */}
+          <div 
+            className="absolute w-48 h-30 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 shadow-xl border border-white/20 p-3.5 text-white transform -rotate-12 translate-y-6 -translate-x-4 opacity-90"
+          >
+            <div className="flex justify-between items-start">
+              <div className="h-4 w-6 rounded bg-amber-300/80" />
+              <span className="text-[10px] font-mono opacity-80">•••• 4102</span>
             </div>
+            <div className="mt-8 text-[11px] font-medium tracking-wide">
+              MULTI-CURRENCY
+            </div>
+          </div>
 
-            {/* Currency & Host Name */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">Currency</label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as Currency)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none cursor-pointer transition-all"
-                >
-                  <option value="USD">USD ($) - US Dollar</option>
-                  <option value="EUR">EUR (€) - Euro</option>
-                  <option value="GBP">GBP (£) - British Pound</option>
-                  <option value="JPY">JPY (¥) - Japanese Yen</option>
-                  <option value="CAD">CAD (CA$) - Canadian Dollar</option>
-                  <option value="AUD">AUD (A$) - Australian Dollar</option>
-                  <option value="NGN">NGN (₦) - Nigerian Naira</option>
-                  <option value="INR">INR (₹) - Indian Rupee</option>
-                  <option value="BRL">BRL (R$) - Brazilian Real</option>
-                </select>
+          {/* Middle Card (Purple / Magenta) */}
+          <div 
+            className="absolute w-48 h-30 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 shadow-2xl border border-white/20 p-3.5 text-white transform rotate-3 translate-y-1 translate-x-2"
+          >
+            <div className="flex justify-between items-start">
+              <div className="h-4 w-6 rounded bg-amber-300/80" />
+              <span className="text-[10px] font-mono opacity-80">•••• 8901</span>
+            </div>
+            <div className="mt-8 text-[11px] font-medium tracking-wide">
+              REAL-TIME SYNC
+            </div>
+          </div>
+
+          {/* Top Card (Glowing Mint Green) */}
+          <div 
+            className="absolute w-52 h-32 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-2xl border border-white/40 p-4 text-white transform -rotate-6 -translate-y-4 hover:rotate-0 transition-transform duration-300 cursor-pointer"
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-1.5">
+                <div className="h-5 w-7 rounded bg-amber-300/90 shadow-xs" />
+                <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-100">IPIN SPLIT</span>
               </div>
+              <span className="text-xs font-mono font-semibold">•••• 7749</span>
+            </div>
+            <div className="mt-7 flex justify-between items-end">
+              <div>
+                <p className="text-[9px] uppercase tracking-wider text-emerald-100">Zero-CAC IT Product</p>
+                <p className="text-xs font-bold">100% Math Fair</p>
+              </div>
+              <div className="flex -space-x-1.5">
+                <div className="h-4 w-4 rounded-full bg-white/60" />
+                <div className="h-4 w-4 rounded-full bg-amber-300/80" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Headline & Bottom Actions Section (Modeled after Screen 1) */}
+      <div className="px-6 pb-10 space-y-6 z-10">
+        <div className="space-y-2.5 text-center">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[#0B2B16]">
+            The Smartest Way to Manage & Split Bills
+          </h1>
+          <p className="text-xs sm:text-sm text-[#0B2B16]/80 font-medium leading-relaxed max-w-xs mx-auto">
+            Create a live split link in seconds. Friends tap items in real-time, zero penny drift, and client-side pixel forensics verify payment transfer screenshots.
+          </p>
+        </div>
+
+        {/* Action Buttons: Solid Forest Green + Pure White */}
+        <div className="space-y-3 pt-2">
+          <button
+            onClick={() => setShowCreateSheet(true)}
+            className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-white py-4 px-6 font-semibold text-sm shadow-forest-btn transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+          >
+            <span>Create Split Room</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={() => setShowJoinSheet(true)}
+            className="w-full rounded-full bg-white hover:bg-slate-50 text-[#0B2B16] py-4 px-6 font-semibold text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+          >
+            <LogIn className="h-4 w-4 text-[#0B2B16]" />
+            <span>Join Existing Split</span>
+          </button>
+        </div>
+
+        <p className="text-center text-[10px] text-[#0B2B16]/60">
+          No sign-up or credit card required • Instant multiplayer link
+        </p>
+      </div>
+
+      {/* Slide-up Sheet: Create Room (Dynamic, Clean, Zero Mock Data) */}
+      {showCreateSheet && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-xl bg-[#B4F32D] text-[#0B2B16] flex items-center justify-center font-bold">
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <h3 className="text-base font-bold text-[#0B2B16]">Create Split Room</h3>
+              </div>
+              <button
+                onClick={() => setShowCreateSheet(false)}
+                className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4 pt-4">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">
-                  Your Name (Host) <span className="text-rose-500">*</span>
+                <label className="text-xs font-semibold text-[#0B2B16]">
+                  Bill / Event Title <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Your Name"
-                  value={organizerName}
-                  onChange={(e) => setOrganizerName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
+                  placeholder="e.g. Friday Dinner, Team Lunch, Groceries"
+                  value={quickTitle}
+                  onChange={(e) => setQuickTitle(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                  autoFocus
                 />
               </div>
-            </div>
 
-            {/* Payout Details */}
-            <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#0B2B16]">Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as Currency)}
+                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-3 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="USD">USD ($) - US Dollar</option>
+                    <option value="EUR">EUR (€) - Euro</option>
+                    <option value="GBP">GBP (£) - British Pound</option>
+                    <option value="JPY">JPY (¥) - Japanese Yen</option>
+                    <option value="CAD">CAD (CA$) - Canadian Dollar</option>
+                    <option value="AUD">AUD (A$) - Australian Dollar</option>
+                    <option value="NGN">NGN (₦) - Nigerian Naira</option>
+                    <option value="INR">INR (₹) - Indian Rupee</option>
+                    <option value="BRL">BRL (R$) - Brazilian Real</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#0B2B16]">
+                    Your Name (Host) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Sarah"
+                    value={organizerName}
+                    onChange={(e) => setOrganizerName(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#0B2B16]">Payment Rail</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bank Transfer, Revolut, PayPal, OPay"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#0B2B16]">Payout Handle / #</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. paypal.me/handle or account #"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs font-mono text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">Payment Rail</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Bank Transfer, Revolut, PayPal"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#0B2B16]">
+                    Initial Line Items (Optional)
+                  </label>
+                  <span className="text-[10px] text-slate-400">1 per line: Name - Price</span>
+                </div>
+                <textarea
+                  rows={3}
+                  placeholder={"Margherita Pizza - 18.00\nCraft IPA Pitcher - 24.50\nTiramisu - 9.00"}
+                  value={rawItemsText}
+                  onChange={(e) => setRawItemsText(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-2.5 text-xs font-mono text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">Handle / Account #</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Account number, username"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none font-mono transition-all"
-                />
-              </div>
-            </div>
 
-            {/* Optional Initial Line Items */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-medium text-slate-600">
-                  Line Items & Prices (Optional - 1 per line)
-                </label>
-                <span className="text-[10px] text-slate-400">Can also add inside room</span>
+              <div className="p-3 rounded-2xl bg-[#F2FCE2] border border-[#DDF3BA] text-xs text-[#0B2B16] flex items-center gap-2.5">
+                <ShieldCheck className="h-4 w-4 text-[#0B2B16] shrink-0" />
+                <span className="text-[11px] font-medium leading-relaxed">
+                  Dynamic room: friends join via your share link and tap what they ordered. Zero fake data.
+                </span>
               </div>
-              <textarea
-                rows={3}
-                placeholder={"Pasta Carbonara - 18.50\nSparkling Water - 4.00"}
-                value={rawItemsText}
-                onChange={(e) => setRawItemsText(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
-              />
-            </div>
 
-            {/* Tax and Tip % */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">Tax (%) Optional</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  value={taxPercent}
-                  onChange={(e) => setTaxPercent(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-600">Tip / Service Fee (%) Optional</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  value={serviceFeePercent}
-                  onChange={(e) => setServiceFeePercent(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-xs font-semibold text-white shadow-blue-btn transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
-            >
-              <span>{isSubmitting ? 'Creating Room...' : 'Start Split Room'}</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </form>
-
-          {/* 3 Core Value Pillars */}
-          <div className="space-y-2.5 pt-2 border-t border-slate-100">
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Users className="h-4 w-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Zero-Signup Multiplayer</h4>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Anyone who opens your link joins instantly. Friends tap what they ordered with real-time sync.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Receipt className="h-4 w-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Zero-Drift Penny Balancing</h4>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Taxes, service fees, and shared items split proportionally down to the exact single penny.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                <Scan className="h-4 w-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Pixel Error Level Analysis (ELA)</h4>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Detects digitally altered amounts and pasted text in transfer screenshots right inside your browser.
-                </p>
-              </div>
-            </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-4 text-xs font-bold tracking-wide uppercase shadow-forest-btn transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+              >
+                <span>{isSubmitting ? 'Creating Room...' : 'Launch Live Split Room'}</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
           </div>
-
         </div>
-      </div>
+      )}
+
+      {/* Slide-up Sheet: Join Room with Code or Link */}
+      {showJoinSheet && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-xl bg-[#0B2B16] text-[#B4F32D] flex items-center justify-center font-bold">
+                  <LogIn className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <h3 className="text-base font-bold text-[#0B2B16]">Join Existing Split</h3>
+              </div>
+              <button
+                onClick={() => setShowJoinSheet(false)}
+                className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleJoinSubmit} className="space-y-4 pt-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#0B2B16]">
+                  Room Code or Full URL
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Paste room ID (e.g. room-lxyz123) or full share link"
+                  value={joinInput}
+                  onChange={(e) => setJoinInput(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-4 text-xs font-bold tracking-wide uppercase shadow-forest-btn transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Enter Room</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

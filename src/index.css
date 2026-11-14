@@ -1,40 +1,84 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+  --brand-lime: #B4F32D;
+  --brand-lime-hover: #A0E21B;
+  --brand-forest: #0B2B16;
+  --brand-forest-dark: #051F10;
+  --brand-forest-light: #164225;
+  --brand-tint: #F2FCE2;
+  --brand-tint-border: #DDF3BA;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f8fafc; /* clean modern slate-50 on desktop */
-  color: #0f172a;
+  background-color: #06190D; /* Sleek dark forest desktop backdrop */
+  color: #0B2B16;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Custom theme utility classes matching the Paymal / Lime palette */
+.bg-brand-lime {
+  background-color: #B4F32D;
+}
+
+.bg-brand-lime-hover:hover {
+  background-color: #A0E21B;
+}
+
+.text-brand-lime {
+  color: #B4F32D;
+}
+
+.bg-brand-forest {
+  background-color: #0B2B16;
+}
+
+.bg-brand-forest-dark {
+  background-color: #051F10;
+}
+
+.text-brand-forest {
+  color: #0B2B16;
+}
+
+.bg-brand-tint {
+  background-color: #F2FCE2;
+}
+
+.border-brand-tint {
+  border-color: #DDF3BA;
+}
+
 /* Responsive shadows */
 .shadow-soft {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 10px rgba(11, 43, 22, 0.05);
 }
 
 .shadow-card {
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 4px 20px -2px rgba(11, 43, 22, 0.08), 0 2px 6px -1px rgba(11, 43, 22, 0.04);
 }
 
 .shadow-floating {
-  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.15), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 14px 35px -4px rgba(5, 31, 16, 0.35), 0 4px 12px -2px rgba(5, 31, 16, 0.15);
 }
 
-.shadow-blue-btn {
-  box-shadow: 0 4px 14px -1px rgba(37, 99, 235, 0.35);
+.shadow-lime-glow {
+  box-shadow: 0 6px 20px -2px rgba(180, 243, 45, 0.45);
+}
+
+.shadow-forest-btn {
+  box-shadow: 0 4px 14px -1px rgba(11, 43, 22, 0.35);
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {

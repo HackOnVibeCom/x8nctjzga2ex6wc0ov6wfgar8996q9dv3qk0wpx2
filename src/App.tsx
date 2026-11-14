@@ -10,6 +10,7 @@ import { SummaryCardTab } from './components/SummaryCardTab';
 import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav } from './components/BottomNav';
+import { Users, X } from 'lucide-react';
 import { 
   fetchRoomFromDb, 
   saveNewRoomToDb, 
@@ -43,11 +44,16 @@ export function App() {
     } catch {}
     return null;
   });
+
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'CLAIM' | 'LEDGER' | 'SUMMARY'>('CLAIM');
   const [hasShareCopied, setHasShareCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
+  // Dynamic Visitor Join Modal
+  const [showVisitorJoinModal, setShowVisitorJoinModal] = useState(false);
+  const [visitorName, setVisitorName] = useState('');
+
   // Modal states
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
@@ -68,8 +74,14 @@ export function App() {
     const dbRoom = await fetchRoomFromDb(roomId);
     if (dbRoom) {
       setRoom(dbRoom);
-      if (dbRoom.participants.length > 0 && !currentUserId) {
-        setCurrentUserId(dbRoom.participants[0].id);
+      
+      // Check if user has an existing saved participant ID for this specific room
+      const savedUserId = localStorage.getItem(`ipin_user_id_${roomId}`);
+      if (savedUserId && dbRoom.participants.some(p => p.id === savedUserId)) {
+        setCurrentUserId(savedUserId);
+      } else if (!currentUserId) {
+        // If visitor arrives at room link without an identity, prompt them to join dynamically
+        setShowVisitorJoinModal(true);
       }
     }
     setIsSyncing(false);
@@ -81,7 +93,6 @@ export function App() {
     const roomId = params.get('r') || params.get('room');
 
     if (roomId) {
-      // Fetch live room from Supabase PostgreSQL
       refreshRoom(roomId);
     }
   }, [refreshRoom]);
@@ -111,7 +122,9 @@ export function App() {
     const fullRoom = roomData as Room;
     setRoom(fullRoom);
     if (fullRoom.participants.length > 0) {
-      setCurrentUserId(fullRoom.participants[0].id);
+      const hostId = fullRoom.participants[0].id;
+      setCurrentUserId(hostId);
+      localStorage.setItem(`ipin_user_id_${fullRoom.id}`, hostId);
     }
     setActiveTab('CLAIM');
 
@@ -154,31 +167,32 @@ export function App() {
   const handleAddParticipant = async (name: string) => {
     if (!room || !name.trim()) return;
 
-    const colors = [
-      'from-blue-500 to-indigo-600',
-      'from-emerald-500 to-teal-600',
-      'from-amber-500 to-orange-600',
-      'from-rose-500 to-pink-600',
-      'from-purple-500 to-violet-600',
-      'from-cyan-500 to-blue-600',
-    ];
-    const randomColor = colors[room.participants.length % colors.length];
-
     const newParticipant: Participant = {
       id: `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
       name: name.trim(),
-      avatarColor: randomColor,
+      avatarColor: 'from-emerald-500 to-teal-600',
       paymentStatus: 'UNPAID',
     };
 
+    const updatedParticipants = [...room.participants, newParticipant];
     setRoom({
       ...room,
-      participants: [...room.participants, newParticipant],
+      participants: updatedParticipants,
     });
     setCurrentUserId(newParticipant.id);
+    localStorage.setItem(`ipin_user_id_${room.id}`, newParticipant.id);
 
     // Real-time DB update
     await addParticipantToDb(room.id, newParticipant);
+  };
+
+  const handleVisitorJoinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitorName.trim() || !room) return;
+
+    await handleAddParticipant(visitorName.trim());
+    setShowVisitorJoinModal(false);
+    setVisitorName('');
   };
 
   const handleAddCustomItem = async (itemData: Partial<LineItem>) => {
@@ -195,19 +209,13 @@ export function App() {
 
     const newItems = [...room.items, newItem];
     const newSubtotal = newItems.reduce((acc, it) => acc + it.totalPrice, 0);
-    const tax = Math.round(newSubtotal * 0.08875 * 100) / 100;
-    const serviceFee = Math.round(newSubtotal * 0.18 * 100) / 100;
     const isZeroDecimal = room.currency === 'JPY';
-    const newGrandTotal = isZeroDecimal 
-      ? Math.round(newSubtotal + tax + serviceFee) 
-      : Math.round((newSubtotal + tax + serviceFee) * 100) / 100;
+    const newGrandTotal = isZeroDecimal ? Math.round(newSubtotal) : Math.round(newSubtotal * 100) / 100;
 
     const updatedRoom: Room = {
       ...room,
       items: newItems,
       subtotal: newSubtotal,
-      tax: isZeroDecimal ? Math.round(tax) : tax,
-      serviceFee: isZeroDecimal ? Math.round(serviceFee) : serviceFee,
       grandTotal: newGrandTotal,
     };
 
@@ -216,8 +224,8 @@ export function App() {
     // Real-time DB updates
     await addCustomItemToDb(room.id, newItem, {
       subtotal: newSubtotal,
-      tax: isZeroDecimal ? Math.round(tax) : tax,
-      serviceFee: isZeroDecimal ? Math.round(serviceFee) : serviceFee,
+      tax: 0,
+      serviceFee: 0,
       grandTotal: newGrandTotal,
     });
   };
@@ -261,7 +269,7 @@ export function App() {
       proof: tx.proofUrl ? { imageUrl: tx.proofUrl, forensics: tx.forensics } : undefined,
     });
 
-    // Automatically trigger official receipt slip modal
+    // Trigger official receipt slip modal
     setSelectedTxForReceipt(tx);
   };
 
@@ -294,8 +302,9 @@ export function App() {
   ).length || 0;
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col font-sans antialiased text-slate-100">
-      {/* Top Universal Navbar */}
+    <div className="min-h-screen bg-[#051F10] flex flex-col font-sans antialiased text-[#0B2B16]">
+      
+      {/* Top Mobile Navbar */}
       <Navbar
         onNewBill={handleNewBill}
         isInRoom={!!room}
@@ -304,21 +313,26 @@ export function App() {
 
       {/* Share Toast Notification */}
       {hasShareCopied && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xl flex items-center gap-1.5 animate-bounce">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[#0B2B16] border border-[#B4F32D] text-[#B4F32D] px-4 py-1.5 text-xs font-bold shadow-xl flex items-center gap-1.5 animate-bounce">
           <span>✓ Room link copied to clipboard! Share with friends.</span>
         </div>
       )}
 
-      {/* Main Responsive Content */}
+      {/* Main Responsive Mobile View */}
       <main className="flex-1 flex flex-col w-full">
         {!room ? (
           <LandingHero
             onCreateRoom={handleCreateRoom}
+            onJoinRoomById={(roomId) => {
+              const newUrl = `${window.location.pathname}?r=${roomId}`;
+              window.history.pushState({ path: newUrl }, '', newUrl);
+              refreshRoom(roomId);
+            }}
           />
         ) : splitResult && currentUser ? (
-          <div className="flex-1 flex flex-col max-w-md mx-auto w-full bg-white text-slate-900 shadow-2xl relative min-h-[calc(100vh-3.5rem)]">
+          <div className="flex-1 flex flex-col max-w-md mx-auto w-full bg-white text-[#0B2B16] shadow-2xl relative min-h-[calc(100vh-3.5rem)]">
             
-            {/* Room Header Component (Total Bill, Participants, Host Info) */}
+            {/* Room Header Component (Modeled after Screen 2 Dashboard) */}
             <RoomHeader
               room={room}
               splitResult={splitResult}
@@ -328,10 +342,11 @@ export function App() {
               onShare={handleShare}
               onOpenSettleUp={() => handleOpenSettleModal(currentUser)}
               onOpenAddItem={() => setActiveTab('CLAIM')}
+              onOpenVerifyAI={() => handleOpenSettleModal(currentUser)}
             />
 
             {/* Active Tab View */}
-            <div className="flex-1 px-4 sm:px-6 pt-4 pb-24">
+            <div className="flex-1 px-4 sm:px-5 pt-3 pb-24">
               {activeTab === 'CLAIM' && (
                 <ClaimItemsTab
                   room={room}
@@ -361,7 +376,7 @@ export function App() {
               )}
             </div>
 
-            {/* Floating Mobile Bottom Navigation Bar (4 Equal Buttons) */}
+            {/* Floating Mobile Bottom Navigation Bar (Deep Forest Green with Lime Accents) */}
             <BottomNav
               activeTab={activeTab}
               onSelectTab={setActiveTab}
@@ -377,7 +392,51 @@ export function App() {
         ) : null}
       </main>
 
-      {/* Settle Up & Forensic Verifier Modal */}
+      {/* Dynamic Visitor Join Bottom Sheet */}
+      {showVisitorJoinModal && room && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 font-sans">
+          <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-[#ECFDC5] text-[#0B2B16] flex items-center justify-center font-bold">
+                  <Users className="h-4 w-4 stroke-[2.2]" />
+                </div>
+                <h3 className="text-base font-bold text-[#0B2B16]">Join Split: {room.title}</h3>
+              </div>
+              <button
+                onClick={() => setShowVisitorJoinModal(false)}
+                className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 mt-2 mb-4">
+              Enter your name to join this bill. You will be able to tap the items you ate and settle your share directly.
+            </p>
+
+            <form onSubmit={handleVisitorJoinSubmit} className="space-y-3">
+              <input
+                type="text"
+                required
+                placeholder="What is your name? (e.g. David)"
+                value={visitorName}
+                onChange={(e) => setVisitorName(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none"
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="w-full rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] py-3.5 text-xs font-bold shadow-forest-btn transition-all cursor-pointer"
+              >
+                Join Bill Split
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Settle Up & Forensic Verifier Modal (Modeled after Screen 3) */}
       {isSettleModalOpen && activeModalUser && room && splitResult && (
         <SettleUpModal
           isOpen={isSettleModalOpen}

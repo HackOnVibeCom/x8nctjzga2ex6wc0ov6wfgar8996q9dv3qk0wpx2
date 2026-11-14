@@ -7,7 +7,8 @@ import {
   ChevronRight,
   ArrowDownLeft,
   Sparkles,
-  Zap
+  Zap,
+  Users
 } from 'lucide-react';
 import { Room, SplitCalculationResult, Participant, Transaction } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -39,37 +40,37 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
   const myRemaining = myBreakdown?.amountRemaining || 0;
 
   return (
-    <div className="space-y-4 pb-28 text-slate-900">
+    <div className="space-y-4 pb-28 text-[#0B2B16] font-sans">
       
-      {/* Real-time Collection Progress Bar */}
-      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2.5">
+      {/* Real-time Collection Progress Bar (Lime Green Accent) */}
+      <div className="rounded-3xl bg-[#F8FAF6] border border-[#DDF3BA] p-4 space-y-2.5 shadow-soft">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-slate-500 uppercase tracking-wider text-[10px]">
+          <span className="font-bold text-[#0B2B16] uppercase tracking-wider text-[10px]">
             Collection Progress
           </span>
-          <span className="font-semibold text-blue-600">
+          <span className="font-extrabold text-[#0B2B16]">
             {splitResult.collectionProgressPercent}% Collected
           </span>
         </div>
 
         {/* Progress Track */}
-        <div className="h-2.5 w-full bg-slate-200/80 rounded-full overflow-hidden">
+        <div className="h-3 w-full bg-slate-200/70 rounded-full overflow-hidden p-0.5">
           <div 
-            className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
+            className="h-full bg-[#B4F32D] rounded-full transition-all duration-500 ease-out border border-[#8ED818]"
             style={{ width: `${splitResult.collectionProgressPercent}%` }}
           />
         </div>
 
         <div className="flex items-center justify-between text-xs pt-0.5">
           <div>
-            <span className="text-[10px] text-slate-400 block font-normal">Collected</span>
-            <span className="font-semibold text-emerald-600">
+            <span className="text-[10px] text-slate-500 block font-medium">Collected</span>
+            <span className="font-bold text-[#0B2B16]">
               {formatMoney(splitResult.totalCollected, room.currency)}
             </span>
           </div>
           <div className="text-right">
-            <span className="text-[10px] text-slate-400 block font-normal">Remaining</span>
-            <span className="font-semibold text-slate-800">
+            <span className="text-[10px] text-slate-500 block font-medium">Remaining</span>
+            <span className="font-bold text-[#0B2B16]">
               {formatMoney(splitResult.remainingToCollect, room.currency)}
             </span>
           </div>
@@ -78,19 +79,19 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
 
       {/* User's Direct Settle Banner if Unpaid */}
       {myRemaining > 0 && (
-        <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white shadow-soft flex items-center justify-between gap-3">
+        <div className="rounded-3xl bg-[#0B2B16] p-4 text-white shadow-forest-btn flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] text-blue-100 font-medium">Your Owed Share</p>
-            <h4 className="text-xl font-bold tracking-tight">
+            <p className="text-[11px] text-[#B4F32D] font-bold uppercase tracking-wider">Your Owed Share</p>
+            <h4 className="text-2xl font-extrabold tracking-tight">
               {formatMoney(myRemaining, room.currency)}
             </h4>
           </div>
           <button
             onClick={() => onOpenSettleModal(currentUser)}
-            className="rounded-xl bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+            className="rounded-full bg-[#B4F32D] text-[#0B2B16] hover:bg-[#A0E21B] px-5 py-2.5 text-xs font-bold shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
           >
-            <Zap className="h-3.5 w-3.5" />
-            <span>Settle Now</span>
+            <Zap className="h-3.5 w-3.5 stroke-[2.5]" />
+            <span>Settle Share</span>
           </button>
         </div>
       )}
@@ -98,116 +99,104 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
       {/* Participants Split Ledger Section */}
       <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Participant Balances
-          </h3>
-          <span className="text-[10px] text-slate-400">Proportional Tax & Tip</span>
+          <h4 className="text-xs font-bold text-[#0B2B16] uppercase tracking-wider">
+            Breakdown by Participant
+          </h4>
+          <span className="text-[11px] text-slate-500">
+            {room.participants.length} total
+          </span>
         </div>
 
-        <div className="space-y-2">
-          {room.participants.map((participant) => {
-            const breakdown = splitResult.participantBreakdowns[participant.id];
-            const isMe = participant.id === currentUser.id;
-            const isExpanded = expandedUser === participant.id;
-            const status = participant.paymentStatus;
-            const remaining = breakdown?.amountRemaining || 0;
+        <div className="space-y-2.5">
+          {room.participants.map((p) => {
+            const breakdown = splitResult.participantBreakdowns[p.id];
+            const isExpanded = expandedUser === p.id;
+            const isMe = p.id === currentUser.id;
 
             return (
               <div
-                key={participant.id}
-                className={`rounded-2xl border transition-all ${
-                  isMe ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-slate-100'
-                } shadow-soft overflow-hidden`}
+                key={p.id}
+                className="rounded-2xl border border-slate-100 bg-white shadow-soft overflow-hidden transition-all"
               >
-                {/* Main Participant Row */}
-                <div className="p-3.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                        isMe ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {participant.name.slice(0, 2).toUpperCase()}
+                {/* Main Row */}
+                <div 
+                  onClick={() => toggleExpand(p.id)}
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50/60"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-[#ECFDC5] text-[#0B2B16] font-bold text-xs flex items-center justify-center shrink-0">
+                      {p.name.slice(0, 2).toUpperCase()}
                     </div>
-
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-900">
-                          {participant.name}
+                        <span className="text-xs sm:text-sm font-bold text-[#0B2B16]">
+                          {p.name}
                         </span>
                         {isMe && (
-                          <span className="rounded-md bg-blue-100 px-1.5 py-0.2 text-[9px] font-medium text-blue-700">
+                          <span className="rounded-full bg-[#F2FCE2] text-[#0B2B16] px-2 py-0.2 text-[9px] font-bold">
                             You
                           </span>
                         )}
-                        {participant.isOrganizer && (
-                          <span className="rounded-md bg-slate-100 px-1.5 py-0.2 text-[9px] font-medium text-slate-600">
+                        {p.isOrganizer && (
+                          <span className="rounded-full bg-[#0B2B16] text-[#B4F32D] px-2 py-0.2 text-[9px] font-bold">
                             Host
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        {breakdown?.claimedItems.length || 0} items ({breakdown?.percentageOfSubtotal || 0}%)
+                      <p className="text-[11px] text-slate-500">
+                        {breakdown?.claimedItems.length || 0} item{(breakdown?.claimedItems.length || 0) === 1 ? '' : 's'} claimed
                       </p>
                     </div>
                   </div>
 
-                  {/* Right: Amount & Badges */}
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <p className="text-xs sm:text-sm font-semibold text-slate-900">
+                      <p className="text-xs sm:text-sm font-bold text-[#0B2B16]">
                         {formatMoney(breakdown?.totalOwed || 0, room.currency)}
                       </p>
-                      <p className="text-[10px]">
-                        {remaining === 0 && (breakdown?.totalOwed || 0) > 0 ? (
-                          <span className="text-emerald-600 font-medium">Fully Settled</span>
-                        ) : status === 'PARTIAL_OR_MISMATCH' ? (
-                          <span className="text-amber-600 font-medium">Underpaid</span>
-                        ) : (
-                          <span className="text-slate-400">Owes {formatMoney(remaining, room.currency)}</span>
-                        )}
-                      </p>
+                      <span className={`text-[10px] font-bold block ${
+                        p.paymentStatus === 'VERIFIED'
+                          ? 'text-emerald-600'
+                          : p.paymentStatus === 'SUSPICIOUS_EDIT'
+                          ? 'text-rose-600'
+                          : 'text-amber-600'
+                      }`}>
+                        {p.paymentStatus === 'VERIFIED' ? '✓ Paid' : 'Pending'}
+                      </span>
                     </div>
 
-                    {/* Actions */}
-                    {remaining > 0 ? (
-                      <button
-                        onClick={() => onOpenSettleModal(participant)}
-                        className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        Settle
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onInspectForensics(participant)}
-                        className="rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        <Scan className="h-3.5 w-3.5 text-blue-600 inline mr-1" />
-                        Proof
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => toggleExpand(participant.id)}
-                      className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
+                    <div className="text-slate-400">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Expanded Breakdown */}
-                {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50/50 p-3 space-y-1.5 text-xs">
-                    {breakdown?.claimedItems.map((ci) => (
-                      <div key={ci.item.id} className="flex justify-between text-slate-600">
-                        <span>{ci.item.cleanName} {ci.shareCount > 1 && `(1/${ci.shareCount})`}</span>
-                        <span>{formatMoney(ci.userPortionPrice, room.currency)}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-200/60 text-[11px]">
-                      <span>Proportional Tax & Tip</span>
-                      <span>{formatMoney(breakdown?.proportionalExtraCharges || 0, room.currency)}</span>
+                {/* Expanded Details */}
+                {isExpanded && breakdown && (
+                  <div className="px-4 pb-4 pt-1 bg-[#F8FAF6] border-t border-slate-100 text-xs space-y-2">
+                    <div className="space-y-1.5 pt-1">
+                      {breakdown.claimedItems.map((ci) => (
+                        <div key={ci.item.id} className="flex justify-between text-slate-600 text-[11px]">
+                          <span>
+                            {ci.item.cleanName} {ci.shareCount > 1 ? `(1/${ci.shareCount})` : ''}
+                          </span>
+                          <span className="font-mono">{formatMoney(ci.userPortionPrice, room.currency)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center font-bold text-xs">
+                      <span>Total Share</span>
+                      <span className="text-[#0B2B16]">{formatMoney(breakdown.totalOwed, room.currency)}</span>
+                    </div>
+
+                    <div className="pt-2 flex gap-2">
+                      <button
+                        onClick={() => onOpenSettleModal(p)}
+                        className="flex-1 rounded-full bg-[#0B2B16] text-[#B4F32D] py-2 text-xs font-bold shadow-xs hover:bg-[#051F10] transition-colors"
+                      >
+                        Settle or Verify
+                      </button>
                     </div>
                   </div>
                 )}
@@ -217,73 +206,6 @@ export const LiveLedgerTab: React.FC<LiveLedgerTabProps> = ({
         </div>
       </div>
 
-      {/* Recent Settlements Activity Feed */}
-      <div className="space-y-2 pt-2">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Settlement Feed ({room.transactions?.length || 0})
-          </h3>
-          <span className="text-[10px] text-slate-400">Live ledger</span>
-        </div>
-
-        {(!room.transactions || room.transactions.length === 0) ? (
-          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5 text-center text-xs text-slate-400">
-            No payments recorded yet. Tap "Settle" to log a payment.
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {room.transactions.map((tx) => {
-              const isCompleted = tx.status === 'COMPLETED';
-              return (
-                <div
-                  key={tx.id}
-                  onClick={() => onViewTransactionReceipt(tx)}
-                  className="rounded-2xl bg-white border border-slate-100 hover:border-slate-200 p-3 flex items-center justify-between gap-3 transition-colors cursor-pointer shadow-soft group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                      isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="h-4 w-4 stroke-[2.2]" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4 stroke-[2.2]" />
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {tx.senderName}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal">
-                          → {tx.recipientName}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">
-                        {tx.method === 'DIRECT_TRANSFER' ? 'Direct Settle' : 'Screenshot Scan'} • {tx.timestamp}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className={`text-xs sm:text-sm font-semibold ${
-                      isCompleted ? 'text-emerald-600' : 'text-amber-600'
-                    }`}>
-                      +{formatMoney(tx.amount, tx.currency)}
-                    </p>
-                    <span className={`inline-block rounded-full px-1.5 py-0.2 text-[9px] font-medium ${
-                      isCompleted ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {isCompleted ? 'Settled' : 'Flagged'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

@@ -3,10 +3,10 @@ import {
   Copy, 
   Check, 
   Receipt, 
-  MessageCircle,
-  CheckCircle2,
-  AlertTriangle,
-  Clock
+  MessageCircle, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Clock 
 } from 'lucide-react';
 import { Room, SplitCalculationResult } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -69,22 +69,21 @@ export const SummaryCardTab: React.FC<SummaryCardTabProps> = ({
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  const verifiedCount = room.participants.filter((p) => p.paymentStatus === 'VERIFIED').length;
-
   return (
-    <div className="space-y-4 pb-28 text-slate-900">
-      {/* Top Action Pills */}
+    <div className="space-y-4 pb-28 text-[#0B2B16] font-sans">
+      
+      {/* Top Action Pills (Lime + Forest Palette) */}
       <div className="flex items-center gap-2">
         <button
           onClick={shareSummaryWhatsApp}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 text-xs font-medium shadow-blue-btn transition-colors cursor-pointer"
+          className="flex-1 flex items-center justify-center gap-2 rounded-full bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] px-4 py-3 text-xs font-bold shadow-forest-btn transition-all cursor-pointer active:scale-95"
         >
           <MessageCircle className="h-4 w-4" />
-          <span>Send to Group Chat</span>
+          <span>Send to WhatsApp Group</span>
         </button>
         <button
           onClick={copySummaryText}
-          className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 text-xs font-medium transition-colors cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] text-[#0B2B16] px-4 py-3 text-xs font-bold border border-[#DDF3BA] transition-all cursor-pointer active:scale-95"
         >
           {copiedSummary ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
           <span>{copiedSummary ? 'Copied' : 'Copy'}</span>
@@ -92,79 +91,61 @@ export const SummaryCardTab: React.FC<SummaryCardTabProps> = ({
       </div>
 
       {/* Clean Digital Receipt Card */}
-      <div className="rounded-3xl border border-slate-100 bg-slate-50/70 p-5 space-y-4 shadow-soft">
+      <div className="rounded-[28px] border border-[#DDF3BA] bg-[#F8FAF6] p-5 space-y-4 shadow-soft">
         <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-200">
-          <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 text-blue-600 mb-1">
-            <Receipt className="h-5 w-5 stroke-[1.75]" />
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-[#ECFDC5] text-[#0B2B16] mb-1">
+            <Receipt className="h-6 w-6 stroke-[2]" />
           </div>
-          <h3 className="text-sm font-semibold text-slate-900">{room.title}</h3>
-          <p className="text-[11px] text-slate-400 font-mono">
-            #{room.id} • {new Date().toLocaleDateString()}
+          <h3 className="text-sm font-bold text-[#0B2B16]">{room.title}</h3>
+          <p className="text-2xl font-black text-[#0B2B16] font-sans">
+            {formatMoney(room.grandTotal, room.currency)}
           </p>
-          <div className="pt-1">
-            <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[10px] font-medium">
-              {verifiedCount} of {room.participants.length} Settled
-            </span>
-          </div>
         </div>
 
-        {/* Financial Summary */}
-        <div className="space-y-1.5 text-xs text-slate-600 pb-3 border-b border-dashed border-slate-200">
-          <div className="flex justify-between">
-            <span>Items Subtotal</span>
-            <span>{formatMoney(splitResult.totalClaimedSubtotal, room.currency)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Taxes & Service Fees</span>
-            <span>{formatMoney(splitResult.extraChargesTotal, room.currency)}</span>
-          </div>
-          <div className="flex justify-between text-sm font-semibold text-slate-900 pt-1.5 border-t border-slate-200">
-            <span>Grand Total</span>
-            <span className="text-blue-600">{formatMoney(splitResult.grandTotal, room.currency)}</span>
-          </div>
-        </div>
-
-        {/* Participants Breakdown */}
-        <div className="space-y-2">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-            Breakdown by Participant
-          </p>
-
-          {room.participants.map((p) => {
-            const b = splitResult.participantBreakdowns[p.id];
-            return (
-              <div key={p.id} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5">
-                  {p.paymentStatus === 'VERIFIED' && (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  )}
-                  {p.paymentStatus === 'PARTIAL_OR_MISMATCH' && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                  )}
-                  {p.paymentStatus === 'SUSPICIOUS_EDIT' && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />
-                  )}
-                  {p.paymentStatus === 'UNPAID' && (
-                    <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  )}
-                  <span className="font-medium text-slate-700">{p.name}</span>
+        {/* Dynamic Participants Summary Rows */}
+        <div className="space-y-2 pt-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Participant Balances
+          </h4>
+          <div className="space-y-1.5">
+            {room.participants.map((p) => {
+              const b = splitResult.participantBreakdowns[p.id];
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-100 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-[#ECFDC5] text-[#0B2B16] font-bold text-[10px] flex items-center justify-center">
+                      {p.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="font-bold text-[#0B2B16]">{p.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-[#0B2B16]">
+                      {formatMoney(b?.totalOwed || 0, room.currency)}
+                    </span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      p.paymentStatus === 'VERIFIED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {p.paymentStatus === 'VERIFIED' ? 'Paid' : 'Unpaid'}
+                    </span>
+                  </div>
                 </div>
-
-                <div className="text-right">
-                  <span className="font-medium text-slate-900">
-                    {formatMoney(b?.totalOwed || 0, room.currency)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        {/* Payout note */}
-        <div className="pt-2 text-center text-[10px] text-slate-400">
-          Host Payout: {room.organizer.payout.bankName} • {room.organizer.payout.accountNumber}
+        {/* Payout Reference Note */}
+        <div className="rounded-2xl bg-white p-3 border border-slate-100 text-[11px] text-slate-600 space-y-1">
+          <span className="font-bold text-[#0B2B16] block">Host Payout Details:</span>
+          <p>{room.organizer.payout.bankName} - {room.organizer.payout.accountNumber} ({room.organizer.payout.accountName})</p>
         </div>
       </div>
+
     </div>
   );
 };

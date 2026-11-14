@@ -11,7 +11,9 @@ import {
   ShieldCheck, 
   Sparkles,
   Eye,
-  Layers
+  Layers,
+  ArrowLeft,
+  CreditCard
 } from 'lucide-react';
 import { Participant, Room, Transaction, ForensicReport } from '../types';
 import { formatMoney } from '../utils/splitMath';
@@ -54,7 +56,6 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   const currentOwed = remainingAmount > 0 ? remainingAmount : owedAmount;
   const payout = room.organizer.payout;
 
-  // Formulate a universal payment link if available
   const isDirectWebLink = payout.accountNumber.includes('http') || 
     payout.accountNumber.includes('.me') || 
     payout.accountNumber.includes('cash.app') ||
@@ -170,244 +171,221 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl relative my-6 text-slate-900 border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 overflow-y-auto">
+      {/* Dark Forest Green Modal Container (Modeled directly after Screen 3) */}
+      <div className="w-full max-w-sm rounded-[32px] bg-[#0B2B16] text-white p-5 shadow-2xl relative my-auto border border-white/10 font-sans">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        {/* Header */}
-        <div className="text-center pt-1 pb-4">
-          <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-            Settle Share for {participant.name}
-          </p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-0.5 font-sans tracking-tight">
-            {formatMoney(currentOwed, room.currency)}
+        {/* Top Navigation Bar: Back icon + Title "Payment Method" (Screen 3 style) */}
+        <div className="flex items-center justify-between pb-3">
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h3 className="text-sm font-bold text-white tracking-wide">
+            Payment & Verification
           </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            Pay directly to <span className="font-semibold text-slate-700">{room.organizer.name}</span>
-          </p>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Success / Inspected State View */}
         {completedTx ? (
-          <div className="space-y-4 py-2 text-center">
-            <div className={`flex h-14 w-14 mx-auto items-center justify-center rounded-full ${
-              completedTx.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+          <div className="space-y-4 py-4 text-center">
+            <div className={`flex h-16 w-16 mx-auto items-center justify-center rounded-full ${
+              completedTx.status === 'COMPLETED'
+                ? 'bg-[#B4F32D] text-[#0B2B16]'
+                : 'bg-rose-500 text-white'
             }`}>
               {completedTx.status === 'COMPLETED' ? (
-                <CheckCircle2 className="h-8 w-8 stroke-[2.2]" />
+                <Check className="h-8 w-8 stroke-[3]" />
               ) : (
-                <AlertTriangle className="h-8 w-8 stroke-[2.2]" />
+                <AlertTriangle className="h-8 w-8 stroke-[2.5]" />
               )}
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                {completedTx.status === 'COMPLETED' ? 'Settlement Confirmed' : 'Payment Flagged'}
-              </p>
-              <h4 className="text-xl font-bold text-slate-900 mt-0.5">
-                {formatMoney(completedTx.amount, room.currency)}
+              <h4 className="text-lg font-bold text-white">
+                {completedTx.status === 'COMPLETED'
+                  ? 'Payment Confirmed'
+                  : 'Verification Flagged'}
               </h4>
-              <p className="text-xs text-slate-500 mt-1">
-                Ref: <span className="font-mono">{completedTx.referenceId}</span>
+              <p className="text-xs text-slate-300 mt-1 max-w-xs mx-auto">
+                {completedTx.status === 'COMPLETED'
+                  ? `Recorded ${formatMoney(completedTx.amount, room.currency)} for ${participant.name}.`
+                  : 'Suspicious artifacts or pixel tampering detected by client-side ELA.'}
               </p>
             </div>
 
-            {/* Visual ELA Heatmap Display if available */}
+            {/* Heatmap Preview if forensics ran */}
             {heatmapUrl && (
-              <div className="space-y-2 rounded-2xl bg-slate-900 p-3 text-left">
-                <div className="flex items-center justify-between text-xs text-white">
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5 text-blue-400" />
-                    <span>Client ELA Visualizer</span>
-                  </span>
-                  <div className="flex rounded-lg bg-white/10 p-0.5 text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => setActiveImgView('HEATMAP')}
-                      className={`px-2 py-0.5 rounded cursor-pointer ${
-                        activeImgView === 'HEATMAP' ? 'bg-blue-600 text-white' : 'text-slate-300'
-                      }`}
-                    >
-                      Heatmap
-                    </button>
-                    {previewUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveImgView('PHOTO')}
-                        className={`px-2 py-0.5 rounded cursor-pointer ${
-                          activeImgView === 'PHOTO' ? 'bg-blue-600 text-white' : 'text-slate-300'
-                        }`}
-                      >
-                        Original
-                      </button>
-                    )}
-                  </div>
+              <div className="rounded-2xl border border-white/10 bg-[#051F10] p-3 text-left space-y-2">
+                <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <span className="font-semibold text-white">ELA Noise Forensics:</span>
+                  <span className="text-[#B4F32D] font-mono">Score: {forensicReport?.elaScore}/100</span>
                 </div>
-
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center min-h-[140px]">
-                  {activeImgView === 'HEATMAP' ? (
-                    <img 
-                      src={heatmapUrl} 
-                      alt="ELA Heatmap" 
-                      className="w-full h-36 object-contain"
-                    />
-                  ) : (
-                    <img 
-                      src={previewUrl!} 
-                      alt="Original Proof" 
-                      className="w-full h-36 object-cover"
-                    />
-                  )}
-                </div>
-
-                <div className="text-[10px] text-slate-300 flex justify-between items-center pt-0.5">
-                  <span>Compression variance:</span>
-                  <span className={`font-mono font-bold ${
-                    completedTx.forensics?.tamperDetected ? 'text-rose-400' : 'text-emerald-400'
-                  }`}>
-                    Score: {completedTx.forensics?.elaScore || 12}/100 ({completedTx.forensics?.elaRiskLevel || 'LOW'})
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {completedTx.forensics?.mismatchDetails && (
-              <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 text-left text-xs text-amber-800">
-                <p className="font-semibold flex items-center gap-1">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>Discrepancy Note</span>
-                </p>
-                <p className="text-[11px] mt-0.5">{completedTx.forensics.mismatchDetails}</p>
+                <img src={heatmapUrl} alt="ELA Heatmap" className="w-full h-32 object-contain rounded-xl bg-black" />
               </div>
             )}
 
             <button
               onClick={onClose}
-              className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white py-3 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="w-full rounded-full bg-[#B4F32D] hover:bg-[#A0E21B] text-[#0B2B16] font-bold text-xs py-3.5 shadow-sm transition-all cursor-pointer"
             >
-              Done
+              Back to Split Room
             </button>
           </div>
         ) : (
-          /* Normal Settlement Options */
-          <div className="space-y-4">
-            {/* Host Payout Destination Card */}
-            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3.5 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-normal">Host Destination</span>
-                <span className="font-semibold text-slate-800">{payout.bankName}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-normal">Account / Handle</span>
-                <span className="font-mono font-medium text-blue-600">{payout.accountNumber}</span>
+          <div className="space-y-4 pt-1">
+            
+            {/* Payout Rails Badges (Mastercard, VISA, PayPal, Revolut, Bank style from Screen 3) */}
+            <div className="flex items-center justify-center gap-2 overflow-x-auto py-1">
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-200">
+                {payout.bankName || 'Direct Transfer'}
+              </span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-200">
+                Multi-Currency
+              </span>
+              <span className="rounded-full bg-[#B4F32D]/20 text-[#B4F32D] px-2.5 py-1 text-[10px] font-bold">
+                Zero Fees
+              </span>
+            </div>
+
+            {/* Glowing Vibrant Lime Card (Modeled directly after Screen 3 Card) */}
+            <div className="rounded-[24px] bg-[#B4F32D] text-[#0B2B16] p-5 shadow-lime-glow space-y-4 relative overflow-hidden">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#0B2B16]/70 block">
+                    HOST PAYOUT CARD
+                  </span>
+                  <h4 className="text-sm font-black tracking-tight text-[#0B2B16]">
+                    {room.organizer.name}
+                  </h4>
+                </div>
+                <CreditCard className="h-6 w-6 text-[#0B2B16]" />
               </div>
 
-              {/* Action buttons for host link */}
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+              <div>
+                <p className="text-[10px] font-medium text-[#0B2B16]/70 uppercase">Account / Handle</p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="font-mono text-base font-extrabold tracking-wider text-[#0B2B16]">
+                    {payout.accountNumber || 'Pending Details'}
+                  </span>
+                  <button
+                    onClick={copyPaymentInfo}
+                    className="flex items-center gap-1 bg-[#0B2B16] hover:bg-[#051F10] text-[#B4F32D] rounded-full px-2.5 py-1 text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    {copiedLink ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#0B2B16]/15 flex justify-between items-end">
+                <div>
+                  <span className="text-[9px] uppercase tracking-wider text-[#0B2B16]/70 block">Amount to Settle</span>
+                  <span className="text-xl font-black font-sans text-[#0B2B16]">
+                    {formatMoney(currentOwed, room.currency)}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-[#0B2B16] bg-black/5 px-2 py-0.5 rounded-full">
+                  {room.currency}
+                </span>
+              </div>
+            </div>
+
+            {/* Mode Switcher Pills: Direct vs Upload Screenshot */}
+            <div className="flex rounded-full bg-[#051F10] p-1 border border-white/10">
+              <button
+                onClick={() => setActiveTab('DIRECT')}
+                className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  activeTab === 'DIRECT'
+                    ? 'bg-white text-[#0B2B16]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Direct Transfer
+              </button>
+              <button
+                onClick={() => setActiveTab('UPLOAD')}
+                className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  activeTab === 'UPLOAD'
+                    ? 'bg-white text-[#0B2B16]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Scan Proof (ELA)
+              </button>
+            </div>
+
+            {/* Direct Tab View */}
+            {activeTab === 'DIRECT' && (
+              <div className="space-y-3 pt-1">
+                <p className="text-xs text-slate-300 leading-relaxed text-center">
+                  Transfer <strong className="text-white font-bold">{formatMoney(currentOwed, room.currency)}</strong> to the account above via banking app, Revolut, or PayPal.
+                </p>
+
                 {resolvedLink && (
                   <a
                     href={resolvedLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 py-2 text-xs font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 py-2.5 text-xs font-semibold text-white transition-colors"
                   >
-                    <span>Open Link</span>
+                    <span>Open Payment Link</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
+
+                {/* Big Pure White Bottom Pill Button (Modeled after Screen 3 "Pay" button) */}
                 <button
-                  type="button"
-                  onClick={copyPaymentInfo}
-                  className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-slate-200/70 hover:bg-slate-200 text-slate-700 py-2 text-xs font-medium transition-colors cursor-pointer"
-                >
-                  {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedLink ? 'Copied' : 'Copy Info'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mode Tabs */}
-            <div className="flex rounded-xl bg-slate-100 p-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('DIRECT')}
-                className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all cursor-pointer ${
-                  activeTab === 'DIRECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                1-Tap Settle
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('UPLOAD')}
-                className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all cursor-pointer ${
-                  activeTab === 'UPLOAD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Verify Screenshot (AI)
-              </button>
-            </div>
-
-            {/* Tab 1: 1-Tap Settle */}
-            {activeTab === 'DIRECT' && (
-              <div className="space-y-3 pt-1">
-                <p className="text-[11px] text-slate-500 text-center">
-                  Once you've sent {formatMoney(currentOwed, room.currency)} via {payout.bankName} or cash, tap below to settle the room ledger.
-                </p>
-
-                <button
-                  type="button"
                   onClick={handleMarkSettled}
                   disabled={isProcessing}
-                  className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white py-3.5 text-xs font-semibold shadow-blue-btn transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full rounded-full bg-white hover:bg-slate-100 text-[#0B2B16] font-extrabold text-sm py-4 shadow-lg transition-transform active:scale-98 cursor-pointer text-center block mt-2"
                 >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>{processingStatus}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>Mark {formatMoney(currentOwed, room.currency)} as Paid</span>
-                      <CheckCircle2 className="h-4 w-4" />
-                    </>
-                  )}
+                  {isProcessing ? processingStatus : 'Confirm & Mark Settled'}
                 </button>
               </div>
             )}
 
-            {/* Tab 2: Upload Real Screenshot / Forensic Scan */}
+            {/* Upload Screenshot (Client-Side ELA) Tab View */}
             {activeTab === 'UPLOAD' && (
               <div className="space-y-3 pt-1">
-                <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/20 p-6 transition-colors cursor-pointer">
-                  <Upload className="h-7 w-7 text-slate-400 mb-1.5" />
-                  <span className="text-xs font-medium text-slate-700">Select Transfer Receipt Screenshot</span>
-                  <span className="text-[10px] text-slate-400 mt-0.5">JPEG, PNG from Photos or Files</span>
+                <label className="block w-full rounded-2xl border-2 border-dashed border-white/20 bg-[#051F10] hover:border-[#B4F32D] p-5 text-center transition-colors cursor-pointer">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleFileSelect}
                     className="hidden"
+                    disabled={isProcessing}
                   />
+                  <div className="space-y-1.5 flex flex-col items-center">
+                    <div className="h-10 w-10 rounded-full bg-white/10 text-[#B4F32D] flex items-center justify-center">
+                      <Scan className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-bold text-white">Upload Transfer Screenshot</p>
+                    <p className="text-[10px] text-slate-400">
+                      Pixel Error Level Analysis detects edited numbers locally.
+                    </p>
+                  </div>
                 </label>
 
                 {isProcessing && (
-                  <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-50 text-blue-700 text-xs">
-                    <div className="h-3.5 w-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-                    <span>{processingStatus}</span>
+                  <div className="rounded-xl bg-[#051F10] p-3 text-center text-xs text-[#B4F32D] animate-pulse">
+                    {processingStatus}
                   </div>
                 )}
               </div>
             )}
+
           </div>
         )}
+
       </div>
     </div>
   );

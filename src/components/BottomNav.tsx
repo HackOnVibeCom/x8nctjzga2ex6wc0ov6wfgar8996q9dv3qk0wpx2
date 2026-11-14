@@ -23,23 +23,23 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   return (
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
-      <nav className="pointer-events-auto w-full max-w-sm rounded-full bg-white/95 backdrop-blur-md px-2 py-1.5 border border-slate-200/80 shadow-floating">
+      <nav className="pointer-events-auto w-full max-w-sm rounded-full bg-[#0B2B16] text-white px-2 py-2 border border-white/10 shadow-floating">
         <div className="grid grid-cols-4 items-center gap-1">
           
           {/* 1. Claim Items */}
           <button
             type="button"
             onClick={() => onSelectTab('CLAIM')}
-            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
               activeTab === 'CLAIM'
-                ? 'text-blue-600 font-semibold bg-blue-50/70'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
+                ? 'text-[#B4F32D] font-bold bg-white/10'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <div className="relative">
-              <Receipt className="h-5 w-5 stroke-[1.8]" />
+              <Receipt className="h-5 w-5 stroke-[2]" />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-2.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-slate-100 px-1 text-[9px] font-semibold text-slate-700 border border-slate-200">
+                <span className="absolute -top-1 -right-2.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-[#B4F32D] px-1 text-[8px] font-bold text-[#0B2B16]">
                   {itemCount}
                 </span>
               )}
@@ -51,16 +51,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('LEDGER')}
-            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
               activeTab === 'LEDGER'
-                ? 'text-blue-600 font-semibold bg-blue-50/70'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
+                ? 'text-[#B4F32D] font-bold bg-white/10'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <div className="relative">
-              <Users className="h-5 w-5 stroke-[1.8]" />
+              <Users className="h-5 w-5 stroke-[2]" />
               {unsettledCount > 0 && (
-                <span className="absolute -top-1 -right-2.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-semibold text-white">
+                <span className="absolute -top-1 -right-2.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-[#B4F32D] px-1 text-[8px] font-bold text-[#0B2B16]">
                   {unsettledCount}
                 </span>
               )}
@@ -68,31 +68,31 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="text-[10px] mt-1 tracking-tight leading-none">Ledger</span>
           </button>
 
-          {/* 3. Verify AI */}
+          {/* 3. Verify AI (Center highlighted action modeled after Screen 2 center ring) */}
           <button
             type="button"
             onClick={onCenterAction}
             title="Scan & Verify Payment Screenshot"
-            className="w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50/60"
+            className="w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer text-slate-300 hover:text-white group"
           >
-            <div className="relative">
-              <Scan className="h-5 w-5 stroke-[1.8]" />
+            <div className="relative p-1 rounded-full border-2 border-[#B4F32D] group-hover:scale-105 transition-transform bg-[#051F10]">
+              <Scan className="h-4 w-4 stroke-[2.2] text-[#B4F32D]" />
             </div>
-            <span className="text-[10px] mt-1 tracking-tight leading-none">Verify AI</span>
+            <span className="text-[10px] mt-0.5 tracking-tight leading-none font-semibold text-[#B4F32D]">Verify AI</span>
           </button>
 
           {/* 4. Summary & Export */}
           <button
             type="button"
             onClick={() => onSelectTab('SUMMARY')}
-            className={`w-full flex flex-col items-center justify-center py-1.5 rounded-full transition-all cursor-pointer ${
+            className={`w-full flex flex-col items-center justify-center py-1 rounded-full transition-all cursor-pointer ${
               activeTab === 'SUMMARY'
-                ? 'text-blue-600 font-semibold bg-blue-50/70'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/60'
+                ? 'text-[#B4F32D] font-bold bg-white/10'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <div className="relative">
-              <FileText className="h-5 w-5 stroke-[1.8]" />
+              <FileText className="h-5 w-5 stroke-[2]" />
             </div>
             <span className="text-[10px] mt-1 tracking-tight leading-none">Summary</span>
           </button>
