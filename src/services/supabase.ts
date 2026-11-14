@@ -82,6 +82,7 @@ export async function fetchRoomFromDb(roomId: string): Promise<Room | null> {
       proofUrl: tx.proof_url || undefined,
       forensics: tx.forensics || undefined,
       notes: tx.notes || undefined,
+      stellarTxHash: (tx.forensics as any)?.stellarTxHash || undefined,
     }));
 
     return {
@@ -101,6 +102,7 @@ export async function fetchRoomFromDb(roomId: string): Promise<Room | null> {
       items,
       participants,
       transactions,
+      stellarVault: (roomData.organizer as any)?.stellarVault || undefined,
     };
   } catch (err) {
     console.error('[Supabase] Failed to fetch room:', err);
@@ -119,7 +121,10 @@ export async function saveNewRoomToDb(room: Room): Promise<boolean> {
       title: room.title,
       currency: room.currency,
       currency_symbol: room.currencySymbol,
-      organizer: room.organizer,
+      organizer: {
+        ...room.organizer,
+        stellarVault: room.stellarVault,
+      },
       subtotal: room.subtotal,
       tax: room.tax,
       service_fee: room.serviceFee,
@@ -359,7 +364,7 @@ export async function recordTransactionToDb(
       timestamp: tx.timestamp,
       status: tx.status,
       proof_url: tx.proofUrl || null,
-      forensics: tx.forensics || null,
+      forensics: tx.stellarTxHash ? { ...tx.forensics, stellarTxHash: tx.stellarTxHash } : (tx.forensics || null),
       notes: tx.notes || null,
     });
 

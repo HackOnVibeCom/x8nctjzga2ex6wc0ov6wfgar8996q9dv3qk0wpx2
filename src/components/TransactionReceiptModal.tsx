@@ -131,7 +131,13 @@ Status: ${isCompleted ? 'VERIFIED SETTLED' : 'FLAGGED FOR REVIEW'}`;
           <div className="flex justify-between">
             <span className="text-slate-500 font-medium">Method</span>
             <span className="font-bold text-[#0B2B16]">
-              {transaction.method === 'DIRECT_TRANSFER' ? 'Direct P2P Settle' : 'AI Verified Proof'}
+              {transaction.method === 'POLLAR_ONRAMP'
+                ? 'Pollar Stellar On-Ramp'
+                : transaction.method === 'POLLAR_OFFRAMP'
+                ? 'Pollar Stellar Off-Ramp'
+                : transaction.method === 'DIRECT_TRANSFER'
+                ? 'Direct P2P Settle'
+                : 'AI Verified Proof'}
             </span>
           </div>
 
@@ -139,6 +145,21 @@ Status: ${isCompleted ? 'VERIFIED SETTLED' : 'FLAGGED FOR REVIEW'}`;
             <span className="text-slate-500 font-medium">Timestamp</span>
             <span className="font-mono text-slate-700">{transaction.timestamp}</span>
           </div>
+
+          {transaction.stellarTxHash && (
+            <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center text-[11px]">
+              <span className="text-slate-500 font-medium">Stellar Testnet Tx</span>
+              <a
+                href={`https://stellar.expert/explorer/testnet/tx/${transaction.stellarTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-800 hover:underline flex items-center gap-1 font-mono font-bold"
+              >
+                <span>{transaction.stellarTxHash.slice(0, 8)}...{transaction.stellarTxHash.slice(-6)}</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

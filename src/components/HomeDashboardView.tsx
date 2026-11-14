@@ -13,10 +13,13 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  X
+  X,
+  Building2,
+  ExternalLink
 } from 'lucide-react';
 import { Room, SplitCalculationResult, Participant } from '../types';
 import { formatMoney } from '../utils/splitMath';
+import { PollarOffRampModal } from './PollarOffRampModal';
 
 interface HomeDashboardViewProps {
   room: Room;
@@ -28,6 +31,7 @@ interface HomeDashboardViewProps {
   onSwitchUser: (participantId: string) => void;
   onShare: () => void;
   onNewBill: () => void;
+  onOffRampSuccess?: (result: any) => void;
 }
 
 export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
@@ -40,9 +44,11 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
   onSwitchUser,
   onShare,
   onNewBill,
+  onOffRampSuccess,
 }) => {
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [showAllUsersModal, setShowAllUsersModal] = useState(false);
+  const [showOffRampModal, setShowOffRampModal] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -229,6 +235,61 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
           </div>
         </div>
         <ChevronRight className="h-4 w-4 text-[#B4F32D] shrink-0" />
+      </div>
+
+      {/* 4.5. Pollar Stellar Testnet Escrow Vault Card */}
+      <div className="rounded-2xl bg-[#0B2B16] text-white p-4 space-y-3 shadow-md border border-[#B4F32D]/30 relative overflow-hidden">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#B4F32D] text-[#0B2B16] flex items-center justify-center font-bold text-xs">
+              <Zap className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Stellar Testnet Escrow Vault</span>
+                <span className="text-[9px] font-bold bg-[#B4F32D] text-[#0B2B16] px-1.5 py-0.2 rounded-full">Pollar</span>
+              </h4>
+              <p className="text-[10px] text-slate-300">
+                Destination: {room.stellarVault?.vendorDetails.vendorName || room.organizer.payout.accountName} ({room.stellarVault?.vendorDetails.bankName || room.organizer.payout.bankName})
+              </p>
+            </div>
+          </div>
+          
+          <a
+            href={`https://stellar.expert/explorer/testnet/account/${room.stellarVault?.vaultAddress || 'GD3EP2FQ5EQQQYTFPRBODQ5UUVC35RCFCFZ3TFFGUVRHQBPBWJYZPEXZ'}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#B4F32D] hover:underline text-[10px] font-mono flex items-center gap-1"
+          >
+            <span>Explorer</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+
+        {/* Vault Pool Progress */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px] font-semibold">
+            <span className="text-slate-300">Vault Pool Balance:</span>
+            <span className="text-[#B4F32D] font-mono font-bold">
+              {formatMoney(splitResult.totalCollected, room.currency)} / {formatMoney(room.grandTotal, room.currency)}
+            </span>
+          </div>
+          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden p-0.5">
+            <div 
+              className="h-full bg-[#B4F32D] rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${splitResult.collectionProgressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Button to Trigger Off-Ramp to Restaurant */}
+        <button
+          onClick={() => setShowOffRampModal(true)}
+          className="w-full rounded-xl bg-[#B4F32D] hover:bg-[#A3E81D] text-[#0B2B16] font-extrabold text-xs py-2.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+        >
+          <Building2 className="h-3.5 w-3.5" />
+          <span>Release Payment to Restaurant via Pollar</span>
+        </button>
       </div>
 
       {/* 5. Scalable Participants Section (Handles 1 to 50+ users smoothly) */}
@@ -512,6 +573,16 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Pollar Stellar Off-Ramp Modal */}
+      <PollarOffRampModal
+        room={room}
+        isOpen={showOffRampModal}
+        onClose={() => setShowOffRampModal(false)}
+        onOffRampSuccess={(res) => {
+          if (onOffRampSuccess) onOffRampSuccess(res);
+        }}
+      />
 
     </div>
   );

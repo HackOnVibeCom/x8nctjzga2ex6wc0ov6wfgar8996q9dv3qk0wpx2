@@ -11,6 +11,7 @@ import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav, NavPage } from './components/BottomNav';
 import { AddFriendModal } from './components/AddFriendModal';
+import { PollarOffRampExecutionResult } from './services/pollarStellar';
 import { Users, X } from 'lucide-react';
 import { 
   fetchRoomFromDb, 
@@ -349,6 +350,44 @@ export function App() {
     setSelectedTxForReceipt(tx);
   };
 
+  const handleOffRampSuccess = async (result: PollarOffRampExecutionResult) => {
+    if (!room) return;
+
+    const offRampTx: Transaction = {
+      id: `tx-offramp-${Date.now()}`,
+      senderId: room.organizer.id,
+      senderName: 'Stellar Escrow Vault',
+      recipientName: result.destinationAccountName || 'Restaurant Account',
+      amount: result.fiatAmountSent,
+      currency: result.fiatCurrency,
+      method: 'POLLAR_OFFRAMP',
+      referenceId: result.settlementReference,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'COMPLETED',
+      stellarTxHash: result.offRampTxHash,
+      notes: `Pollar off-ramp released to restaurant (${result.destinationBank} - ${result.destinationAccount})`,
+    };
+
+    const updatedVault = room.stellarVault
+      ? {
+          ...room.stellarVault,
+          offRampStatus: 'OFFRAMPED_TO_RESTAURANT' as const,
+          offRampTxHash: result.offRampTxHash,
+          offRampedAt: result.completedAt,
+        }
+      : undefined;
+
+    const updatedRoom: Room = {
+      ...room,
+      stellarVault: updatedVault,
+      transactions: [offRampTx, ...(room.transactions || [])],
+    };
+
+    setRoom(updatedRoom);
+    await recordTransactionToDb(room.id, offRampTx);
+    setSelectedTxForReceipt(offRampTx);
+  };
+
   const handleOpenSettleModal = (participant: Participant) => {
     setActiveModalUser(participant);
     setIsSettleModalOpen(true);
@@ -414,6 +453,7 @@ export function App() {
                 onSwitchUser={(id) => setCurrentUserId(id)}
                 onShare={handleShare}
                 onNewBill={handleNewBill}
+                onOffRampSuccess={handleOffRampSuccess}
               />
             )}
 

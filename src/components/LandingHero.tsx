@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Currency, Room } from '../types';
 import { getCurrencySymbol } from '../utils/splitMath';
+import { createRoomStellarVault } from '../services/pollarStellar';
 
 interface LandingHeroProps {
   onCreateRoom: (roomData: Partial<Room>) => void;
@@ -30,8 +31,10 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
   const [quickTitle, setQuickTitle] = useState('');
   const [currency, setCurrency] = useState<Currency>('USD');
   const [organizerName, setOrganizerName] = useState('');
+  const [vendorName, setVendorName] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [vendorAccountName, setVendorAccountName] = useState('');
   const [rawItemsText, setRawItemsText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -77,6 +80,19 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
     const organizerId = `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const hostDisplayName = organizerName.trim() || 'Host';
 
+    // Create Dedicated Stellar Testnet Vault via Pollar
+    const resolvedVendorName = vendorName.trim() || quickTitle.trim() || 'Restaurant / Vendor';
+    const resolvedBankName = bankName.trim() || 'Direct Bank Transfer';
+    const resolvedAccountNumber = accountNumber.trim() || '0123456789';
+    const resolvedAccountName = vendorAccountName.trim() || resolvedVendorName;
+
+    const stellarVault = createRoomStellarVault({
+      vendorName: resolvedVendorName,
+      bankName: resolvedBankName,
+      accountNumber: resolvedAccountNumber,
+      accountName: resolvedAccountName,
+    });
+
     // Completely dynamic: NO fake friends pre-added! ONLY the host exists.
     const newRoom: Partial<Room> = {
       id: `room-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`,
@@ -87,9 +103,9 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
         id: organizerId,
         name: hostDisplayName,
         payout: {
-          bankName: bankName.trim() || 'Direct Transfer',
-          accountNumber: accountNumber.trim() || '',
-          accountName: hostDisplayName,
+          bankName: resolvedBankName,
+          accountNumber: resolvedAccountNumber,
+          accountName: resolvedAccountName,
         },
       },
       items: parsedItems,
@@ -110,6 +126,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
       ],
       transactions: [],
       createdAt: new Date().toISOString(),
+      stellarVault,
     };
 
     onCreateRoom(newRoom);
@@ -328,25 +345,71 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Where the money will land: Restaurant Local Account */}
+              <div className="rounded-2xl bg-[#F2FCE2] border border-[#DDF3BA] p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2B16]">
+                    Where the Pooled Money Will Land
+                  </span>
+                  <span className="text-[9px] font-bold bg-[#0B2B16] text-[#B4F32D] px-2 py-0.5 rounded-full">
+                    Pollar Stellar Off-Ramp
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-600 leading-tight">
+                  Restaurant local bank account where funds will be released. You never have to front money from your personal bank!
+                </p>
+
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#0B2B16]">Payment Rail</label>
+                  <label className="text-xs font-semibold text-[#0B2B16]">
+                    Restaurant / Vendor Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    placeholder="e.g. Bank Transfer, Revolut, PayPal, OPay"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                    required
+                    placeholder="e.g. Ocean Basket, SoHo Bistro, KFC, Mama Cass"
+                    value={vendorName}
+                    onChange={(e) => setVendorName(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:outline-none transition-all"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#0B2B16]">
+                      Restaurant Bank <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. GTBank, Chase, Opay"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#0B2B16]">
+                      Account / IBAN # <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 0123456789"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-mono text-[#0B2B16] focus:border-[#0B2B16] focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#0B2B16]">Payout Handle / #</label>
+                  <label className="text-xs font-semibold text-[#0B2B16]">Account Holder Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. paypal.me/handle or account #"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-[#F8FAF6] px-4 py-3 text-xs font-mono text-[#0B2B16] focus:border-[#0B2B16] focus:bg-white focus:outline-none transition-all"
+                    placeholder="e.g. Ocean Basket LTD / Manager Name"
+                    value={vendorAccountName}
+                    onChange={(e) => setVendorAccountName(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-[#0B2B16] focus:border-[#0B2B16] focus:outline-none transition-all"
                   />
                 </div>
               </div>
@@ -366,6 +429,10 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                     onClick={() => {
                       if (!quickTitle) setQuickTitle('Bistro Italian Dinner');
                       if (!organizerName) setOrganizerName('Alex');
+                      setVendorName('Bistro Cucina');
+                      setBankName('Chase Bank');
+                      setAccountNumber('4019283746');
+                      setVendorAccountName('Bistro Cucina LLC');
                       setRawItemsText("Truffle Tagliatelle - 24.00\nWoodfired Margherita - 18.50\nBarolo Red Wine - 38.00\nClassic Tiramisu - 12.00");
                     }}
                     className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"
@@ -378,6 +445,10 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                       if (!quickTitle) setQuickTitle('Shinjuku Izakaya');
                       if (!organizerName) setOrganizerName('Kenji');
                       setCurrency('JPY');
+                      setVendorName('Izakaya Shinjuku');
+                      setBankName('Mizuho Bank');
+                      setAccountNumber('883719204');
+                      setVendorAccountName('Izakaya Shinjuku KK');
                       setRawItemsText("Yakitori Skewer Platter - 2400\nSashimi Combo - 2800\nJunmai Daiginjo Sake - 3500\nMatcha Gelato - 1200");
                     }}
                     className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"
@@ -387,8 +458,12 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (!quickTitle) setQuickTitle('Lounge Drinks & Bites');
+                      if (!quickTitle) setQuickTitle('Vibe Lounge & Bar');
                       if (!organizerName) setOrganizerName('Sam');
+                      setVendorName('Vibe Lounge');
+                      setBankName('GTBank');
+                      setAccountNumber('0293847561');
+                      setVendorAccountName('Vibe Hospitality LTD');
                       setRawItemsText("Signature Cocktail - 16.00\nCraft Beer Pitcher - 28.00\nNachos Grande - 19.50\nSpicy Wings - 17.00");
                     }}
                     className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"

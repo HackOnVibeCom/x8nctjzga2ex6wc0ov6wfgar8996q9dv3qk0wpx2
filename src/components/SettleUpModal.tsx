@@ -18,6 +18,7 @@ import {
 import { Participant, Room, Transaction, ForensicReport } from '../types';
 import { formatMoney } from '../utils/splitMath';
 import { runClientSideEla } from '../utils/elaTamper';
+import { quotePollarOnRamp, executePollarOnRamp } from '../services/pollarStellar';
 import confetti from 'canvas-confetti';
 
 interface SettleUpModalProps {
@@ -39,7 +40,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   onClose,
   onRecordTransaction,
 }) => {
-  const [activeTab, setActiveTab] = useState<'DIRECT' | 'UPLOAD'>('DIRECT');
+  const [activeTab, setActiveTab] = useState<'POLLAR' | 'DIRECT' | 'UPLOAD'>('POLLAR');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -70,6 +71,48 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // 0. Pollar Stellar On-Ramp
+  const handlePollarOnRamp = async () => {
+    setIsProcessing(true);
+    setProcessingStatus('Connecting to Pollar on Stellar Testnet...');
+    await new Promise((r) => setTimeout(r, 600));
+
+    setProcessingStatus(`Initiating fiat-to-USDC on-ramp for ${formatMoney(currentOwed, room.currency)}...`);
+
+    try {
+      const vaultAddr = room.stellarVault?.vaultAddress || 'GD3EP2FQ5EQQQYTFPRBODQ5UUVC35RCFCFZ3TFFGUVRHQBPBWJYZPEXZ';
+      const res = await executePollarOnRamp({
+        vaultAddress: vaultAddr,
+        amountFiat: currentOwed,
+        currency: room.currency,
+        senderName: participant.name,
+      });
+
+      const newTx: Transaction = {
+        id: `tx-${Date.now()}`,
+        senderId: participant.id,
+        senderName: participant.name,
+        recipientName: 'Stellar Escrow Vault',
+        amount: currentOwed,
+        currency: room.currency,
+        method: 'POLLAR_ONRAMP',
+        referenceId: `POL-${res.txHash.slice(0, 8).toUpperCase()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'COMPLETED',
+        stellarTxHash: res.txHash,
+        notes: `Pollar On-Ramp deposit into Stellar vault (${res.usdcFunded} USDC)`,
+      };
+
+      setIsProcessing(false);
+      setCompletedTx(newTx);
+      confetti({ particleCount: 70, spread: 75, origin: { y: 0.6 } });
+      onRecordTransaction(newTx);
+    } catch (err) {
+      console.error('Pollar on-ramp failed:', err);
+      setIsProcessing(false);
+    }
   };
 
   // 1. Direct Mark as Settled
@@ -299,29 +342,77 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
               </div>
             </div>
 
-            {/* Mode Switcher Pills: Direct vs Upload Screenshot */}
-            <div className="flex rounded-full bg-[#051F10] p-1 border border-white/10">
+            {/* Mode Switcher Pills: Pollar vs Direct vs Upload Screenshot */}
+            <div className="flex rounded-full bg-[#051F10] p-1 border border-white/10 text-[11px]">
+              <button
+                onClick={() => setActiveTab('POLLAR')}
+                className={`flex-1 rounded-full py-1.5 font-bold transition-colors cursor-pointer ${
+                  activeTab === 'POLLAR'
+                    ? 'bg-[#B4F32D] text-[#0B2B16]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Pollar Ramp
+              </button>
               <button
                 onClick={() => setActiveTab('DIRECT')}
-                className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                className={`flex-1 rounded-full py-1.5 font-bold transition-colors cursor-pointer ${
                   activeTab === 'DIRECT'
                     ? 'bg-white text-[#0B2B16]'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Direct Transfer
+                Direct
               </button>
               <button
                 onClick={() => setActiveTab('UPLOAD')}
-                className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                className={`flex-1 rounded-full py-1.5 font-bold transition-colors cursor-pointer ${
                   activeTab === 'UPLOAD'
                     ? 'bg-white text-[#0B2B16]'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Scan Proof (ELA)
+                Scan Proof
               </button>
             </div>
+
+            {/* Pollar Stellar On-Ramp Tab */}
+            {activeTab === 'POLLAR' && (
+              <div className="space-y-3 pt-1">
+                <div className="rounded-2xl bg-[#051F10] border border-[#B4F32D]/30 p-3.5 space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-[10px] uppercase font-bold text-[#B4F32D]">
+                    <span>Pollar Multichain On-Ramp</span>
+                    <span className="font-mono">Stellar Testnet</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">You Pay:</span>
+                    <span className="font-extrabold text-white">{formatMoney(currentOwed, room.currency)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Vault Receives:</span>
+                    <span className="font-mono font-bold text-[#B4F32D]">
+                      {quotePollarOnRamp(currentOwed, room.currency).usdcAmount} USDC
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                    <span>1 {room.currency} ≈ {quotePollarOnRamp(currentOwed, room.currency).exchangeRate} USDC</span>
+                    <span>Fee: ${quotePollarOnRamp(currentOwed, room.currency).pollarFeeUsdc}</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-300 text-center leading-tight">
+                  Funds on-ramp into the room's Stellar Testnet escrow vault. Once funded, the Host releases payment directly to the restaurant!
+                </p>
+
+                <button
+                  onClick={handlePollarOnRamp}
+                  disabled={isProcessing}
+                  className="w-full rounded-full bg-[#B4F32D] hover:bg-[#A3E81D] text-[#0B2B16] font-extrabold text-sm py-4 shadow-lg transition-transform active:scale-98 cursor-pointer text-center block mt-2 disabled:opacity-50"
+                >
+                  {isProcessing ? processingStatus : `On-Ramp ${formatMoney(currentOwed, room.currency)} via Pollar`}
+                </button>
+              </div>
+            )}
 
             {/* Direct Tab View */}
             {activeTab === 'DIRECT' && (

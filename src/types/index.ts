@@ -51,6 +51,21 @@ export interface Participant {
   handle?: string;
 }
 
+export interface StellarVaultDetails {
+  vaultAddress: string; // Stellar public key (G...)
+  network: 'testnet' | 'public';
+  totalFundedUsdc: number;
+  offRampStatus: 'POOLING' | 'READY_TO_OFFRAMP' | 'OFFRAMPING' | 'OFFRAMPED_TO_RESTAURANT';
+  offRampTxHash?: string;
+  offRampedAt?: string;
+  vendorDetails: {
+    vendorName: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+}
+
 export interface OrganizerPayoutDetails {
   bankName: string;
   accountNumber: string;
@@ -66,13 +81,14 @@ export interface Transaction {
   recipientName: string;
   amount: number;
   currency: Currency;
-  method: 'DIRECT_TRANSFER' | 'RECEIPT_UPLOAD';
+  method: 'DIRECT_TRANSFER' | 'RECEIPT_UPLOAD' | 'POLLAR_ONRAMP' | 'POLLAR_OFFRAMP';
   referenceId: string;
   timestamp: string;
   status: 'COMPLETED' | 'FLAGGED_MISMATCH' | 'SUSPICIOUS_EDIT';
   proofUrl?: string;
   forensics?: ForensicReport;
   notes?: string;
+  stellarTxHash?: string;
 }
 
 export interface Room {
@@ -96,6 +112,7 @@ export interface Room {
   transactions: Transaction[];
   createdAt: string;
   receiptImageUrl?: string;
+  stellarVault?: StellarVaultDetails;
 }
 
 export interface ParticipantShareBreakdown {
