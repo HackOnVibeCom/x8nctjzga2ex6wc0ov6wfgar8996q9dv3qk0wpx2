@@ -282,14 +282,29 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Button to Trigger Off-Ramp to Restaurant */}
-        <button
-          onClick={() => setShowOffRampModal(true)}
-          className="w-full rounded-xl bg-[#B4F32D] hover:bg-[#A3E81D] text-[#0B2B16] font-extrabold text-xs py-2.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-        >
-          <Building2 className="h-3.5 w-3.5" />
-          <span>Release Payment to Restaurant via Pollar</span>
-        </button>
+        {/* Button to Trigger Off-Ramp to Restaurant (Guarded by Vault Pool Balance) */}
+        {splitResult.totalCollected > 0 ? (
+          <button
+            onClick={() => setShowOffRampModal(true)}
+            className="w-full rounded-xl bg-[#B4F32D] hover:bg-[#A3E81D] text-[#0B2B16] font-extrabold text-xs py-2.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            <span>Release {formatMoney(splitResult.totalCollected, room.currency)} to Restaurant via Pollar</span>
+          </button>
+        ) : (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-2 text-center space-y-1">
+            <button
+              disabled
+              className="w-full rounded-xl bg-white/10 text-slate-400 font-bold text-xs py-2.5 flex items-center justify-center gap-1.5 cursor-not-allowed opacity-60"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Vault Empty — Awaiting Friend On-Ramps</span>
+            </button>
+            <p className="text-[10px] text-slate-400">
+              Friends must first on-ramp their share. Once funded, you can release payment to {room.stellarVault?.vendorDetails.vendorName || 'the restaurant'}.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 5. Scalable Participants Section (Handles 1 to 50+ users smoothly) */}

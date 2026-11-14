@@ -11,6 +11,7 @@ import { SettleUpModal } from './components/SettleUpModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav, NavPage } from './components/BottomNav';
 import { AddFriendModal } from './components/AddFriendModal';
+import { CreateRoomModal } from './components/CreateRoomModal';
 import { PollarOffRampExecutionResult } from './services/pollarStellar';
 import { Users, X } from 'lucide-react';
 import { 
@@ -75,6 +76,7 @@ export function App() {
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
+  const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
 
   // Sync state to localStorage as fallback
@@ -155,16 +157,13 @@ export function App() {
   }, [room?.id, refreshRoom]);
 
   const handleNewBill = () => {
-    setRoom(null);
-    setCurrentUserId('');
-    localStorage.removeItem('ipin_saved_room');
-    window.history.pushState({}, '', '/');
-    setActivePage('HOME');
+    setIsCreateRoomModalOpen(true);
   };
 
   const handleCreateRoom = async (roomData: Partial<Room>) => {
     const fullRoom = roomData as Room;
     setRoom(fullRoom);
+    setIsCreateRoomModalOpen(false);
     if (fullRoom.participants.length > 0) {
       const host = fullRoom.participants[0];
       setCurrentUserId(host.id);
@@ -616,6 +615,13 @@ export function App() {
           onClose={() => setSelectedTxForReceipt(null)}
         />
       )}
+
+      {/* In-App Create Split Room Modal (Keeps user inside app) */}
+      <CreateRoomModal
+        isOpen={isCreateRoomModalOpen}
+        onClose={() => setIsCreateRoomModalOpen(false)}
+        onCreateRoom={handleCreateRoom}
+      />
     </div>
   );
 }

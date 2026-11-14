@@ -19,6 +19,7 @@ import { Participant, Room, Transaction, ForensicReport } from '../types';
 import { formatMoney } from '../utils/splitMath';
 import { runClientSideEla } from '../utils/elaTamper';
 import { quotePollarOnRamp, executePollarOnRamp } from '../services/pollarStellar';
+import { PollarCheckoutModal } from './PollarCheckoutModal';
 import confetti from 'canvas-confetti';
 
 interface SettleUpModalProps {
@@ -45,6 +46,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
   const [completedTx, setCompletedTx] = useState<Transaction | null>(null);
+  const [showPollarCheckout, setShowPollarCheckout] = useState(false);
 
   // ELA Forensics state
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -405,11 +407,11 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
                 </p>
 
                 <button
-                  onClick={handlePollarOnRamp}
+                  onClick={() => setShowPollarCheckout(true)}
                   disabled={isProcessing}
                   className="w-full rounded-full bg-[#B4F32D] hover:bg-[#A3E81D] text-[#0B2B16] font-extrabold text-sm py-4 shadow-lg transition-transform active:scale-98 cursor-pointer text-center block mt-2 disabled:opacity-50"
                 >
-                  {isProcessing ? processingStatus : `On-Ramp ${formatMoney(currentOwed, room.currency)} via Pollar`}
+                  Pay via Pollar (Virtual Account & Testnet)
                 </button>
               </div>
             )}
@@ -478,6 +480,20 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
         )}
 
       </div>
+
+      {/* Interactive Pollar Checkout Gateway */}
+      <PollarCheckoutModal
+        room={room}
+        participant={participant}
+        currentOwed={currentOwed}
+        isOpen={showPollarCheckout}
+        onClose={() => setShowPollarCheckout(false)}
+        onSuccess={(tx) => {
+          setCompletedTx(tx);
+          setShowPollarCheckout(false);
+          onRecordTransaction(tx);
+        }}
+      />
     </div>
   );
 };
