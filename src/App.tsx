@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Room, Participant, LineItem, Transaction } from './types';
 import { calculateProportionalSplit } from './utils/splitMath';
-import { Navbar } from './components/Navbar';
 import { LandingHero } from './components/LandingHero';
 import { RoomHeader } from './components/RoomHeader';
 import { ClaimItemsTab } from './components/ClaimItemsTab';
@@ -52,7 +51,9 @@ export function App() {
   
   // Dynamic Visitor Join Modal
   const [showVisitorJoinModal, setShowVisitorJoinModal] = useState(false);
-  const [visitorName, setVisitorName] = useState('');
+  const [visitorName, setVisitorName] = useState(() => {
+    return localStorage.getItem('ipin_user_name') || '';
+  });
 
   // Modal states
   const [activeModalUser, setActiveModalUser] = useState<Participant | null>(null);
@@ -77,8 +78,16 @@ export function App() {
       
       // Check if user has an existing saved participant ID for this specific room
       const savedUserId = localStorage.getItem(`ipin_user_id_${roomId}`);
+      const savedUserName = localStorage.getItem('ipin_user_name');
+
       if (savedUserId && dbRoom.participants.some(p => p.id === savedUserId)) {
         setCurrentUserId(savedUserId);
+      } else if (savedUserName && dbRoom.participants.some(p => p.name.toLowerCase() === savedUserName.toLowerCase())) {
+        const matched = dbRoom.participants.find(p => p.name.toLowerCase() === savedUserName.toLowerCase());
+        if (matched) {
+          setCurrentUserId(matched.id);
+          localStorage.setItem(`ipin_user_id_${roomId}`, matched.id);
+        }
       } else if (!currentUserId) {
         // If visitor arrives at room link without an identity, prompt them to join dynamically
         setShowVisitorJoinModal(true);
@@ -122,9 +131,10 @@ export function App() {
     const fullRoom = roomData as Room;
     setRoom(fullRoom);
     if (fullRoom.participants.length > 0) {
-      const hostId = fullRoom.participants[0].id;
-      setCurrentUserId(hostId);
-      localStorage.setItem(`ipin_user_id_${fullRoom.id}`, hostId);
+      const host = fullRoom.participants[0];
+      setCurrentUserId(host.id);
+      localStorage.setItem(`ipin_user_id_${fullRoom.id}`, host.id);
+      localStorage.setItem('ipin_user_name', host.name);
     }
     setActiveTab('CLAIM');
 
@@ -181,6 +191,7 @@ export function App() {
     });
     setCurrentUserId(newParticipant.id);
     localStorage.setItem(`ipin_user_id_${room.id}`, newParticipant.id);
+    localStorage.setItem('ipin_user_name', newParticipant.name);
 
     // Real-time DB update
     await addParticipantToDb(room.id, newParticipant);
@@ -190,9 +201,22 @@ export function App() {
     e.preventDefault();
     if (!visitorName.trim() || !room) return;
 
-    await handleAddParticipant(visitorName.trim());
+    // Check if a participant with this name already exists in the room
+    const existing = room.participants.find(
+      (p) => p.name.trim().toLowerCase() === visitorName.trim().toLowerCase()
+    );
+
+    if (existing) {
+      // Connect to their existing profile!
+      setCurrentUserId(existing.id);
+      localStorage.setItem(`ipin_user_id_${room.id}`, existing.id);
+      localStorage.setItem('ipin_user_name', existing.name);
+    } else {
+      // Create new dynamic participant!
+      await handleAddParticipant(visitorName.trim());
+    }
+
     setShowVisitorJoinModal(false);
-    setVisitorName('');
   };
 
   const handleAddCustomItem = async (itemData: Partial<LineItem>) => {
@@ -302,24 +326,17 @@ export function App() {
   ).length || 0;
 
   return (
-    <div className="min-h-screen bg-[#051F10] flex flex-col font-sans antialiased text-[#0B2B16]">
+    <div className="min-h-screen bg-[#051F10] flex flex-col justify-center items-center font-sans antialiased text-[#0B2B16]">
       
-      {/* Top Mobile Navbar */}
-      <Navbar
-        onNewBill={handleNewBill}
-        isInRoom={!!room}
-        roomTitle={room?.title}
-      />
-
       {/* Share Toast Notification */}
       {hasShareCopied && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[#0B2B16] border border-[#B4F32D] text-[#B4F32D] px-4 py-1.5 text-xs font-bold shadow-xl flex items-center gap-1.5 animate-bounce">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[#0B2B16] border border-[#B4F32D] text-[#B4F32D] px-4 py-1.5 text-xs font-bold shadow-xl flex items-center gap-1.5 animate-bounce">
           <span>✓ Room link copied to clipboard! Share with friends.</span>
         </div>
       )}
 
-      {/* Main Responsive Mobile View */}
-      <main className="flex-1 flex flex-col w-full">
+      {/* Main Pure Mobile Container (Zero outer desktop headers) */}
+      <main className="w-full max-w-md min-h-screen bg-white relative flex flex-col shadow-2xl overflow-hidden">
         {!room ? (
           <LandingHero
             onCreateRoom={handleCreateRoom}
@@ -330,9 +347,9 @@ export function App() {
             }}
           />
         ) : splitResult && currentUser ? (
-          <div className="flex-1 flex flex-col max-w-md mx-auto w-full bg-white text-[#0B2B16] shadow-2xl relative min-h-[calc(100vh-3.5rem)]">
+          <div className="flex-1 flex flex-col w-full bg-white text-[#0B2B16] relative min-h-screen">
             
-            {/* Room Header Component (Modeled after Screen 2 Dashboard) */}
+            {/* Room Header Component with In-App New Split + 50+ User Roster */}
             <RoomHeader
               room={room}
               splitResult={splitResult}
@@ -343,6 +360,7 @@ export function App() {
               onOpenSettleUp={() => handleOpenSettleModal(currentUser)}
               onOpenAddItem={() => setActiveTab('CLAIM')}
               onOpenVerifyAI={() => handleOpenSettleModal(currentUser)}
+              onNewBill={handleNewBill}
             />
 
             {/* Active Tab View */}
@@ -376,7 +394,7 @@ export function App() {
               )}
             </div>
 
-            {/* Floating Mobile Bottom Navigation Bar (Deep Forest Green with Lime Accents) */}
+            {/* Floating Mobile Bottom Navigation Bar */}
             <BottomNav
               activeTab={activeTab}
               onSelectTab={setActiveTab}
@@ -392,7 +410,7 @@ export function App() {
         ) : null}
       </main>
 
-      {/* Dynamic Visitor Join Bottom Sheet */}
+      {/* Dynamic Visitor Join Bottom Sheet (Supports 50+ users joining via link) */}
       {showVisitorJoinModal && room && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 font-sans">
           <div className="w-full max-w-md rounded-t-[32px] sm:rounded-3xl bg-white p-6 shadow-2xl text-[#0B2B16] animate-in slide-in-from-bottom">
@@ -436,7 +454,7 @@ export function App() {
         </div>
       )}
 
-      {/* Settle Up & Forensic Verifier Modal (Modeled after Screen 3) */}
+      {/* Settle Up & Forensic Verifier Modal */}
       {isSettleModalOpen && activeModalUser && room && splitResult && (
         <SettleUpModal
           isOpen={isSettleModalOpen}
