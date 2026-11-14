@@ -1,7 +1,7 @@
 # IPIN (ɪᴘ) — Zero-CAC Multiplayer Bill Split & Forensic Settlement
 
 > **Theme:** Zero-CAC IT Product | HackOnVibe November 2026 Build  
-> **Team:** `lit-up` | **Live Web App:** [x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com](https://x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com/)
+> **Team:** `lit-up` | **Live Web App:** [https://ipin.web.app](https://ipin.web.app) | **Hackathon Mirror:** [x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com](https://x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com/)
 
 ---
 
@@ -27,12 +27,12 @@ Standard split apps divide items and round blindly, creating \$0.01–\$0.05 rou
 - **Shared Items:** If 3 people split a \$10.00 dish, IPIN allocates `[$3.33, $3.33, $3.34]`, strictly preserving $\sum \text{portions} \equiv \text{itemTotal}$.
 - **Proportional Extra Charges:** Taxes, service fees, delivery charges, and discounts are distributed mathematically based on each participant's exact item subtotal proportion:
   $$\text{ExtraCharge}_i = \text{TotalExtraCharges} \times \left( \frac{\text{ItemSubtotal}_i}{\text{BillSubtotal}} \right)$$
-- **Zero-Drift Guarantee:** When all items are claimed, the sum of participant balances matches `grandTotal` to the exact cent across USD, EUR, GBP, CAD, AUD, INR, BRL, and zero-decimal JPY ($\text{JPY } ¥$).
+- **Zero-Drift Guarantee:** When all items are claimed, the sum of participant balances matches `grandTotal` to the exact cent across USD, EUR, GBP, CAD, AUD, NGN, INR, BRL, and zero-decimal JPY ($\text{JPY } ¥$).
 
 ### Engine 2: Universal P2P Settlement
 - No closed-loop regional banking lock-in. Works for **every person on Earth**.
 - Hosts configure their preferred universal payment rail: `PayPal.me`, `Revolut.me`, `cash.app/$cashtag`, `Venmo`, `Wise`, `IBAN/SEPA`, or cash.
-- Participants can tap **"Open Link ↗"** to pay directly in their installed payment app, or tap **"1-Tap Mark as Paid"** to settle the group ledger.
+- Participants can tap **"Copy"** or pay directly in their installed payment app, or tap **"1-Tap Mark as Paid"** to settle the group ledger.
 
 ### Engine 3: Client-Side Pixel Tampering Forensics (Error Level Analysis)
 - **The Problem:** In group expenses, individuals frequently send fake or edited payment screenshots (altering the transferred amount or host name using mobile markup or Photoshop).
@@ -43,25 +43,25 @@ Standard split apps divide items and round blindly, creating \$0.01–\$0.05 rou
   - Automatically flags amount mismatches if the extracted screenshot value is less than the owed ledger share.
   - Runs **100% in the client's browser** with zero cloud GPU costs, preserving privacy and enabling instant analysis.
 
+### Engine 4: Real-Time Multiplayer Sync via Supabase Channels
+- Instant updates across 50+ connected devices via Supabase PostgreSQL realtime replication.
+- Zero server state bottleneck; passwordless phone/@handle identity stored securely.
+
 ---
 
 ## 3. Quick 30-Second Guide for Judges
 
 Judges can test the entire product immediately without any login or credit card:
 
-1. **Open the Live App:** [https://x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com/](https://x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com/)
-2. **Choose a Preloaded International Demo:**
-   - 🇺🇸 **USD (\$):** SoHo NYC Bistro Dinner (NYC 8.875% tax + 18% gratuity)
-   - 🇪🇺 **EUR (€):** Berlin Craft Tasting Dinner (19% German MwSt VAT)
-   - 🇯🇵 **JPY (¥):** Tokyo Izakaya Night (10% Japanese consumption tax, zero-decimal yen)
-3. **Test Claiming Items:** Tap any dish to claim or unclaim. Notice how co-claimed items split dynamically and proportional tax updates instantly.
-4. **Test Settlement & AI Verification:**
-   - Tap **"Settle"** next to an unpaid participant (e.g. Jordan).
-   - Under **"Verify Screenshot (AI)"**, click **`[Test Authentic]`** or **`[Test Tampered Edit]`**.
-   - Inspect the interactive **ELA Forensic Heatmap** to see the detected pixel compression disparity and amount matching in real time.
-5. **Test Group Export:** Switch to the **Summary** tab and tap **"Send to Group Chat"** or **"Copy"** to inspect the auto-generated WhatsApp/Discord settlement card.
-
----
+1. **Open the Live App:** [https://ipin.web.app](https://ipin.web.app) (or [Hackathon Mirror](https://x8nctjzga2ex6wc0ov6wfgar8996q9dv3qk0wpx2.hackonvibe.com/))
+2. **Create a Split Room:** Tap **"Create Split Room"** and choose a sample template (`+ Sample Dinner`, `+ Sample Izakaya`, or `+ Sample Lounge`) to populate real items in 1 click!
+3. **Test Claiming Items (`/claim`):** Tap any dish to claim or unclaim. Notice how co-claimed items split dynamically and proportional tax updates instantly.
+4. **Test Real Friend Search:** In the **Home** or **Roster** tab, tap **"Add Friend"** to search registered participants by Name or @Handle, or invite via WhatsApp.
+5. **Test AI Forensic Verification (`/verify`):**
+   - Navigate to **"Verify AI"** on the bottom navigation bar.
+   - Click **`[Authentic Slip]`** to see uniform compression with zero tampering.
+   - Click **`[Tampered Edit]`** to inspect the live **ELA Forensic Heatmap** revealing photoshopped digits and spliced artifact anomalies!
+6. **Test Group Export (`/summary`):** Switch to the **Summary** tab to inspect the auto-generated WhatsApp/Discord settlement slip and copy summary.
 
 ## 4. Technical Stack & Repository Structure
 

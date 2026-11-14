@@ -358,6 +358,45 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                   </label>
                   <span className="text-[10px] text-slate-400">1 per line: Name - Price</span>
                 </div>
+
+                {/* Quick 1-click sample templates for instant testing */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!quickTitle) setQuickTitle('Bistro Italian Dinner');
+                      if (!organizerName) setOrganizerName('Alex');
+                      setRawItemsText("Truffle Tagliatelle - 24.00\nWoodfired Margherita - 18.50\nBarolo Red Wine - 38.00\nClassic Tiramisu - 12.00");
+                    }}
+                    className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"
+                  >
+                    + Sample Dinner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!quickTitle) setQuickTitle('Shinjuku Izakaya');
+                      if (!organizerName) setOrganizerName('Kenji');
+                      setCurrency('JPY');
+                      setRawItemsText("Yakitori Skewer Platter - 2400\nSashimi Combo - 2800\nJunmai Daiginjo Sake - 3500\nMatcha Gelato - 1200");
+                    }}
+                    className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"
+                  >
+                    + Sample Izakaya (¥)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!quickTitle) setQuickTitle('Lounge Drinks & Bites');
+                      if (!organizerName) setOrganizerName('Sam');
+                      setRawItemsText("Signature Cocktail - 16.00\nCraft Beer Pitcher - 28.00\nNachos Grande - 19.50\nSpicy Wings - 17.00");
+                    }}
+                    className="rounded-full bg-[#F2FCE2] hover:bg-[#E4F8CC] border border-[#DDF3BA] text-[#0B2B16] px-2.5 py-1 text-[10px] font-bold cursor-pointer shrink-0 transition-all active:scale-95"
+                  >
+                    + Sample Lounge
+                  </button>
+                </div>
+
                 <textarea
                   rows={3}
                   placeholder={"Margherita Pizza - 18.00\nCraft IPA Pitcher - 24.50\nTiramisu - 9.00"}
