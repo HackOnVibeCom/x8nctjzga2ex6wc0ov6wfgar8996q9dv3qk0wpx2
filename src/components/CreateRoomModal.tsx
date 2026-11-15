@@ -47,6 +47,10 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const [vendorAccountName, setVendorAccountName] = useState('');
   const [isResolvingBank, setIsResolvingBank] = useState(false);
   const [isBankVerified, setIsBankVerified] = useState(false);
+  const [bankVerificationSource, setBankVerificationSource] = useState<
+    'live_paystack' | 'known_sandbox' | 'stellar_onchain' | 'manual_nuban' | 'unresolved'
+  >('unresolved');
+  const [bankStatusMessage, setBankStatusMessage] = useState<string>('');
 
   // Dynamic Item Builder (Pieces, Price, Deletion)
   const [items, setItems] = useState<DraftItem[]>([
@@ -63,12 +67,18 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     if (clean.length >= 10) {
       let isCancelled = false;
       setIsResolvingBank(true);
-      resolveBankAccount(bankName, clean, vendorName).then((res) => {
+      resolveBankAccount(bankName, clean, vendorAccountName).then((res) => {
         if (!isCancelled) {
           setIsResolvingBank(false);
-          if (res.isVerified) {
+          setBankVerificationSource(res.source);
+          setBankStatusMessage(res.message || '');
+          if (res.source === 'known_sandbox' || res.source === 'live_paystack' || res.source === 'stellar_onchain') {
             setVendorAccountName(res.accountName);
             setIsBankVerified(true);
+          } else if (res.source === 'manual_nuban') {
+            if (vendorAccountName.trim().length > 2) {
+              setIsBankVerified(true);
+            }
           }
         }
       });
@@ -77,8 +87,10 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
       };
     } else {
       setIsBankVerified(false);
+      setBankVerificationSource('unresolved');
+      setBankStatusMessage('');
     }
-  }, [accountNumber, bankName, vendorName]);
+  }, [accountNumber, bankName]);
 
   if (!isOpen) return null;
 
@@ -129,6 +141,8 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     setAccountNumber('9136447931');
     setVendorAccountName('IBRAHIM S. (OPAY)');
     setIsBankVerified(true);
+    setBankVerificationSource('known_sandbox');
+    setBankStatusMessage('Verified Sandbox Destination (OPay Digital Services)');
     setItems([
       { id: 'it-1', name: 'Amala with Abula (Gbegiri & Ewedu)', quantity: 3, unitPrice: 2500 },
       { id: 'it-2', name: 'Ogunfe (Spicy Goat Meat)', quantity: 4, unitPrice: 2000 },
@@ -145,6 +159,8 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     setAccountNumber('4019283746');
     setVendorAccountName('BISTRO CUCINA LLC');
     setIsBankVerified(true);
+    setBankVerificationSource('known_sandbox');
+    setBankStatusMessage('Verified USD Commercial Account (JPMorgan Chase)');
     setItems([
       { id: 'it-1', name: 'Truffle Tagliatelle', quantity: 2, unitPrice: 24.0 },
       { id: 'it-2', name: 'Woodfired Margherita Pizza', quantity: 2, unitPrice: 18.5 },
@@ -162,6 +178,8 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     setAccountNumber('GD3EP2FQ5EQQQYTFPRBODQ5UUVC35RCFCFZ3TFFGUVRHQBPBWJYZPEXZ');
     setVendorAccountName('IZAKAYA SHINJUKU KK');
     setIsBankVerified(true);
+    setBankVerificationSource('stellar_onchain');
+    setBankStatusMessage('Verified Stellar Horizon Web3 Vault');
     setItems([
       { id: 'it-1', name: 'Yakitori Skewer Platter', quantity: 2, unitPrice: 2400 },
       { id: 'it-2', name: 'Assorted Sashimi Combo', quantity: 1, unitPrice: 2800 },
@@ -429,33 +447,54 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
               </div>
             </div>
 
-            {/* Auto-Loaded Verified Account Name Banner */}
+            {/* Verified / Confirmed Account Holder Name Banner */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-[#0B2B16]">
-                  Account Holder Name
+                  Account Holder Name <span className="text-rose-500">*</span>
                 </label>
                 {isBankVerified && (
                   <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-700" />
-                    <span>Auto-Verified with Bank</span>
+                    <span>
+                      {bankVerificationSource === 'known_sandbox' || bankVerificationSource === 'live_paystack'
+                        ? 'Auto-Verified with Bank'
+                        : bankVerificationSource === 'stellar_onchain'
+                        ? 'Stellar Keypair'
+                        : 'User-Confirmed Name (NUBAN Validated)'}
+                    </span>
                   </span>
                 )}
               </div>
               <input
                 type="text"
-                placeholder="Auto-resolving from account number..."
+                required
+                placeholder={
+                  isResolvingBank
+                    ? 'Checking bank network & NUBAN...'
+                    : 'Enter account holder name as on bank statement'
+                }
                 value={vendorAccountName}
                 onChange={(e) => {
-                  setVendorAccountName(e.target.value);
-                  setIsBankVerified(false);
+                  const val = e.target.value;
+                  setVendorAccountName(val);
+                  setIsBankVerified(val.trim().length > 2);
+                  if (val.trim().length > 2) {
+                    setBankVerificationSource('manual_nuban');
+                    setBankStatusMessage('User-confirmed legal name for destination off-ramp');
+                  }
                 }}
                 className={`w-full rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
                   isBankVerified 
-                    ? 'border-emerald-400 bg-emerald-50 text-emerald-900' 
+                    ? 'border-emerald-400 bg-emerald-50 text-emerald-950' 
                     : 'border-slate-200 bg-white text-[#0B2B16]'
                 } focus:outline-none`}
               />
+              {bankStatusMessage && (
+                <p className="text-[10px] text-slate-500 flex items-center gap-1 font-mono pt-0.5">
+                  <span className="text-emerald-600 font-bold">ℹ</span> {bankStatusMessage}
+                </p>
+              )}
             </div>
           </div>
 
