@@ -1,0 +1,8 @@
+file 'C:/Users/HP/hovibe/narration_audio/scene_1.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_2.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_3.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_4.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_5.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_6.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_7.mp3'
+file 'C:/Users/HP/hovibe/narration_audio/scene_8.mp3'
