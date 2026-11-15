@@ -12,6 +12,13 @@ import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 import { BottomNav, NavPage } from './components/BottomNav';
 import { AddFriendModal } from './components/AddFriendModal';
 import { CreateRoomModal } from './components/CreateRoomModal';
+import { DeviceSecurityGate } from './components/DeviceSecurityGate';
+import { 
+  isDeviceAuthenticated, 
+  markRoomAuthenticated, 
+  getStoredDeviceAuth, 
+  DeviceAuthData 
+} from './services/webauthn';
 import { PollarOffRampExecutionResult } from './services/pollarStellar';
 import { Users, X } from 'lucide-react';
 import { 
@@ -63,6 +70,11 @@ export function App() {
   const [activePage, setActivePage] = useState<NavPage>(() => getPageFromPath());
   const [hasShareCopied, setHasShareCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDeviceUnlocked, setIsDeviceUnlocked] = useState<boolean>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('r') || params.get('room');
+    return isDeviceAuthenticated(roomId || undefined);
+  });
   
   // Dynamic Visitor Join Modal
   const [showVisitorJoinModal, setShowVisitorJoinModal] = useState(false);
@@ -114,6 +126,9 @@ export function App() {
     if (dbRoom) {
       setRoom(dbRoom);
       
+      const unlocked = isDeviceAuthenticated(roomId);
+      setIsDeviceUnlocked(unlocked);
+
       // Check if user has an existing saved participant ID for this specific room
       const savedUserId = localStorage.getItem(`ipin_user_id_${roomId}`);
       const savedUserName = localStorage.getItem('ipin_user_name');
@@ -126,7 +141,7 @@ export function App() {
           setCurrentUserId(matched.id);
           localStorage.setItem(`ipin_user_id_${roomId}`, matched.id);
         }
-      } else if (!currentUserId) {
+      } else if (!currentUserId && unlocked) {
         // If visitor arrives at room link without an identity, prompt them to join dynamically
         setShowVisitorJoinModal(true);
       }
@@ -165,6 +180,23 @@ export function App() {
     const fullRoom = roomData as Room;
     setRoom(fullRoom);
     setIsCreateRoomModalOpen(false);
+
+    // Bind room to authenticated host device
+    const existingAuth = getStoredDeviceAuth();
+    if (existingAuth) {
+      markRoomAuthenticated(fullRoom.id, existingAuth);
+    } else {
+      markRoomAuthenticated(fullRoom.id, {
+        credentialId: 'host_auth_' + fullRoom.id,
+        userId: 'host_' + fullRoom.id,
+        accountLabel: 'IPIN Vault Host',
+        role: 'host',
+        verifiedAt: Date.now(),
+        roomId: fullRoom.id,
+      });
+    }
+    setIsDeviceUnlocked(true);
+
     if (fullRoom.participants.length > 0) {
       const host = fullRoom.participants[0];
       setCurrentUserId(host.id);
@@ -443,6 +475,20 @@ export function App() {
               const newUrl = `/?r=${roomId}`;
               window.history.pushState({ page: 'HOME' }, '', newUrl);
               refreshRoom(roomId);
+            }}
+          />
+        ) : !isDeviceUnlocked ? (
+          <DeviceSecurityGate
+            room={room}
+            onUnlocked={(authData) => {
+              setIsDeviceUnlocked(true);
+              markRoomAuthenticated(room.id, authData);
+              const savedUserId = localStorage.getItem(`ipin_user_id_${room.id}`);
+              if (savedUserId && room.participants.some(p => p.id === savedUserId)) {
+                setCurrentUserId(savedUserId);
+              } else if (!currentUserId) {
+                setShowVisitorJoinModal(true);
+              }
             }}
           />
         ) : splitResult && currentUser ? (
