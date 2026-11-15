@@ -1,0 +1,78 @@
+{
+  "total_ms": 213390,
+  "total_sec": 213.39,
+  "steps": {
+    "step_01": {
+      "title": "Landing Page & Client Path Start",
+      "duration_ms": 13660,
+      "duration_sec": 13.66,
+      "file": "step_01.mp3"
+    },
+    "step_02": {
+      "title": "Auto-Resolving Restaurant Bank",
+      "duration_ms": 24580,
+      "duration_sec": 24.58,
+      "file": "step_02.mp3"
+    },
+    "step_03": {
+      "title": "Interactive Item Builder & Pieces Stepper",
+      "duration_ms": 14110,
+      "duration_sec": 14.11,
+      "file": "step_03.mp3"
+    },
+    "step_04": {
+      "title": "Deploying Stellar Escrow Vault",
+      "duration_ms": 12600,
+      "duration_sec": 12.6,
+      "file": "step_04.mp3"
+    },
+    "step_05": {
+      "title": "Room Dashboard & Escrow Transparency",
+      "duration_ms": 15960,
+      "duration_sec": 15.96,
+      "file": "step_05.mp3"
+    },
+    "step_06": {
+      "title": "Claiming Line Items",
+      "duration_ms": 12580,
+      "duration_sec": 12.58,
+      "file": "step_06.mp3"
+    },
+    "step_07": {
+      "title": "Mid-Meal Dish Addition Modal",
+      "duration_ms": 18670,
+      "duration_sec": 18.67,
+      "file": "step_07.mp3"
+    },
+    "step_08": {
+      "title": "Pollar Multi-Currency Checkout",
+      "duration_ms": 11860,
+      "duration_sec": 11.86,
+      "file": "step_08.mp3"
+    },
+    "step_09": {
+      "title": "Stellar On-Chain Minting & Official Receipt",
+      "duration_ms": 25390,
+      "duration_sec": 25.39,
+      "file": "step_09.mp3"
+    },
+    "step_10": {
+      "title": "Host Off-Ramp to Restaurant OPay Account",
+      "duration_ms": 28200,
+      "duration_sec": 28.2,
+      "file": "step_10.mp3"
+    },
+    "step_11": {
+      "title": "Client-Side ELA Receipt Forensics",
+      "duration_ms": 20400,
+      "duration_sec": 20.4,
+      "file": "step_11.mp3"
+    },
+    "step_12": {
+      "title": "Final Summary & Audit Breakdown",
+      "duration_ms": 15380,
+      "duration_sec": 15.38,
+      "file": "step_12.mp3"
+    }
+  }
+}
